@@ -1,7 +1,7 @@
 import type { GameConfig } from "./types";
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
-  version: "faithful-0.3-halifax-west-end",
+  version: "faithful-0.4-hrm-locations",
   startDate: "1984-12-01",
   numTurns: 31,
   startCash: 2000,
@@ -40,26 +40,26 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   },
   drugsMeta: {
     expensiveMessageA: "Sorry, cops made a big %DRUG% bust! Prices are outrageous!",
-    expensiveMessageB: "Buyers are paying ridiculous damn money for %DRUG%, eh!",
+    expensiveMessageB: "Buyers are paying ridiculous damn money for %DRUG%, my guy!",
     cheapDivide: 4,
     expensiveMultiply: 4,
   },
   serviceLocations: {
-    loanShark: "bronx",
-    bank: "bronx",
-    gunShop: "ghetto",
-    roughPub: "ghetto",
+    loanShark: "downtown-halifax",
+    bank: "downtown-halifax",
+    gunShop: "sackville",
+    roughPub: "spryfield",
   },
   locations: [
-    { id: "bronx", name: "Bronx", policePresence: 10, minDrug: 7, maxDrug: 12 },
-    { id: "ghetto", name: "Ghetto", policePresence: 5, minDrug: 8, maxDrug: 12 },
-    { id: "central-park", name: "Central Park", policePresence: 15, minDrug: 6, maxDrug: 12 },
-    { id: "manhattan", name: "Manhattan", policePresence: 90, minDrug: 4, maxDrug: 10 },
-    { id: "coney-island", name: "Coney Island", policePresence: 20, minDrug: 6, maxDrug: 12 },
-    { id: "brooklyn", name: "Brooklyn", policePresence: 70, minDrug: 4, maxDrug: 11 },
-    { id: "queens", name: "Queens", policePresence: 50, minDrug: 6, maxDrug: 12 },
-    { id: "staten-island", name: "Staten Island", policePresence: 20, minDrug: 6, maxDrug: 12 },
+    { id: "downtown-halifax", name: "Downtown Halifax", policePresence: 75, minDrug: 4, maxDrug: 10 },
+    { id: "north-end-halifax", name: "North End Halifax", policePresence: 35, minDrug: 6, maxDrug: 12 },
     { id: "west-end-halifax", name: "West End Halifax", policePresence: 12, minDrug: 6, maxDrug: 10 },
+    { id: "dartmouth", name: "Dartmouth", policePresence: 45, minDrug: 6, maxDrug: 12 },
+    { id: "bedford", name: "Bedford", policePresence: 30, minDrug: 5, maxDrug: 10 },
+    { id: "sackville", name: "Sackville", policePresence: 22, minDrug: 7, maxDrug: 12 },
+    { id: "spryfield", name: "Spryfield", policePresence: 28, minDrug: 7, maxDrug: 12 },
+    { id: "halifax-public-gardens", name: "Halifax Public Gardens", policePresence: 50, minDrug: 5, maxDrug: 11 },
+    { id: "eastern-passage", name: "Eastern Passage", policePresence: 18, minDrug: 6, maxDrug: 12 },
   ],
   drugs: [
     {
@@ -228,7 +228,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "mama-dee",
       name: "Mama Dee",
-      locationId: "bronx",
+      locationId: "north-end-halifax",
       drugIds: ["weed", "hashish", "ludes", "peyote"],
       traits: ["loyal", "connected"],
       greed: 30,
@@ -244,7 +244,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "needle-nick",
       name: "Needle Nick",
-      locationId: "bronx",
+      locationId: "north-end-halifax",
       drugIds: ["heroin", "speed", "opium", "ludes"],
       traits: ["paranoid", "greedy"],
       greed: 70,
@@ -260,7 +260,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "rico",
       name: "Rico",
-      locationId: "ghetto",
+      locationId: "spryfield",
       drugIds: ["cocaine", "heroin", "pcp", "speed"],
       traits: ["violent", "proud"],
       greed: 55,
@@ -276,7 +276,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "professor-x",
       name: "Professor X",
-      locationId: "central-park",
+      locationId: "halifax-public-gardens",
       drugIds: ["acid", "mda", "shrooms", "peyote"],
       traits: ["connected", "loyal"],
       greed: 25,
@@ -292,7 +292,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "big-paulie",
       name: "Big Paulie",
-      locationId: "manhattan",
+      locationId: "downtown-halifax",
       drugIds: ["cocaine", "heroin", "opium", "mda", "pcp"],
       traits: ["greedy", "violent", "connected"],
       greed: 90,
@@ -308,7 +308,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "boardwalk-sal",
       name: "Boardwalk Sal",
-      locationId: "coney-island",
+      locationId: "dartmouth",
       drugIds: ["weed", "hashish", "acid", "shrooms", "ludes"],
       traits: ["loyal", "proud"],
       greed: 45,
@@ -323,8 +323,8 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     },
     {
       id: "brooklyn-rose",
-      name: "Brooklyn Rose",
-      locationId: "brooklyn",
+      name: "Bedford Rose",
+      locationId: "bedford",
       drugIds: ["cocaine", "speed", "mda", "pcp", "acid"],
       traits: ["paranoid", "connected"],
       greed: 60,
@@ -339,8 +339,8 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     },
     {
       id: "queens-vic",
-      name: "Queens Vic",
-      locationId: "queens",
+      name: "Sackville Vic",
+      locationId: "sackville",
       drugIds: ["heroin", "opium", "weed", "hashish", "peyote"],
       traits: ["greedy", "loyal"],
       greed: 75,
@@ -356,7 +356,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "ferry-jo",
       name: "Ferry Jo",
-      locationId: "staten-island",
+      locationId: "eastern-passage",
       drugIds: ["weed", "ludes", "shrooms", "opium", "speed"],
       traits: ["loyal"],
       greed: 35,
@@ -390,7 +390,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
         priceMin: 65,
         priceMax: 260,
         relationshipGain: 2,
-        prompt: "%DEALER% pulls a cracked ultrasound wand from a Sobeys bag and offers you a scan for %PRICE%. \"No questions, no damn refunds, eh?\"",
+        prompt: "%DEALER% pulls a cracked ultrasound wand from a Sobeys bag and offers you a scan for %PRICE%. \"No questions, no damn refunds, my guy?\"",
         acceptMessage: "You pay %PRICE%. %DEALER% smears cold gel on your jacket and says the screen shows \"a tiny cop-shaped problem.\" Relationship +%RELATIONSHIP%.",
         declineMessage: "%DEALER% mutters that you are scared of science and wipes the wand on his sleeve, eh.",
         poorMessage: "%DEALER% says the ultrasound machine does not run on promises. You need %PRICE%, eh.",
@@ -401,7 +401,8 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "tin-can-marty",
       name: "Tin Can Marty",
-      locationId: "bronx",
+      locationId: "north-end-halifax",
+      dialogStyle: "hoser",
       toughness: 22,
       trustThreshold: 24,
       fearThreshold: -35,
@@ -413,7 +414,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "scratchy-lou",
       name: "Scratchy Lou",
-      locationId: "ghetto",
+      locationId: "spryfield",
       toughness: 38,
       trustThreshold: 30,
       fearThreshold: -45,
@@ -425,7 +426,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "benchwise-eddie",
       name: "Benchwise Eddie",
-      locationId: "central-park",
+      locationId: "halifax-public-gardens",
       toughness: 18,
       trustThreshold: 20,
       fearThreshold: -30,
@@ -436,8 +437,8 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     },
     {
       id: "subway-sue",
-      name: "Subway Sue",
-      locationId: "manhattan",
+      name: "Barrington Sue",
+      locationId: "downtown-halifax",
       toughness: 30,
       trustThreshold: 35,
       fearThreshold: -50,
@@ -449,7 +450,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "boardwalk-benny",
       name: "Boardwalk Benny",
-      locationId: "coney-island",
+      locationId: "dartmouth",
       toughness: 25,
       trustThreshold: 22,
       fearThreshold: -38,
@@ -461,7 +462,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "stoop-annie",
       name: "Stoop Annie",
-      locationId: "brooklyn",
+      locationId: "bedford",
       toughness: 34,
       trustThreshold: 28,
       fearThreshold: -42,
@@ -473,7 +474,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "rail-yard-ray",
       name: "Rail Yard Ray",
-      locationId: "queens",
+      locationId: "sackville",
       toughness: 32,
       trustThreshold: 26,
       fearThreshold: -40,
@@ -485,7 +486,8 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     {
       id: "ferry-dock-frank",
       name: "Ferry Dock Frank",
-      locationId: "staten-island",
+      locationId: "eastern-passage",
+      dialogStyle: "hoser",
       toughness: 20,
       trustThreshold: 20,
       fearThreshold: -32,
@@ -498,6 +500,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
       id: "chebucto-cam",
       name: "Chebucto Cam",
       locationId: "west-end-halifax",
+      dialogStyle: "hoser",
       toughness: 26,
       trustThreshold: 24,
       fearThreshold: -36,
@@ -510,14 +513,14 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   subwaySayings: [
     "Wouldn't it be funny if everyone suddenly quacked at once, eh?",
     "The Pope was once Jewish, you know",
-    "I'll bet you have some really damn interesting dreams, eh",
+    "I'll bet you have some really damn interesting dreams, my guy",
     "So I think I'm going to Amsterdam this year",
     "Son, you need a yellow haircut",
     "Does your mother know you're a damn dope dealer, eh?",
     "Are you high on something?",
     "There is nothing like having a shitload of money, eh",
     "We're winning the war for drugs!",
-    "Drugs can be your friend, eh!",
+    "Drugs can be your friend, my guy!",
   ],
   playing: [
     "`Are you Experienced` by Jimi Hendrix",

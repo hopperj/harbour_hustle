@@ -84,6 +84,7 @@ export interface HoboConfig {
   id: string;
   name: string;
   locationId: string;
+  dialogStyle?: "hoser";
   toughness: number;
   trustThreshold: number;
   fearThreshold: number;
@@ -187,6 +188,8 @@ export interface MarketQuote {
   deal: DealType;
 }
 
+export type DealerStock = Record<string, Record<string, number>>;
+
 export interface PriceHistoryEntry {
   turn: number;
   date: string;
@@ -259,6 +262,7 @@ export interface GameState {
   logIndex: number;
   market: MarketQuote[];
   priceHistory: Record<string, PriceHistoryEntry[]>;
+  dealerStock: DealerStock;
   dealerRelationships: Record<string, number>;
   hoboRelationships: Record<string, number>;
   locationInfluence: Record<string, number>;

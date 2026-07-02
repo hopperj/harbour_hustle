@@ -4,7 +4,7 @@
 
 - NPC id: `rico`
 - NPC type: Dealer
-- Location: Ghetto
+- Location: Spryfield
 - Interaction surface: Market dealer tab, buy, sell, gift, rob
 
 ## Personality
@@ -13,7 +13,7 @@ Rico is violent and proud. He wants respect up front and reacts badly to humilia
 
 ## Information Known
 
-- Knows the Ghetto street market for Cocaine, Heroin, PCP, and Speed.
+- Knows the Spryfield street market for Cocaine, Heroin, PCP, and Speed.
 - Knows today's stock state and shared location-level buy/sell prices for those drugs.
 - Understands local danger, who is armed, and whether the player has enough reputation to be taken seriously.
 - Knows enough about local police pressure to warn or threaten around it.

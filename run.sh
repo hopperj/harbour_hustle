@@ -31,7 +31,7 @@ HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-5173}"
 
 echo "Detected $OS_NAME."
-echo "Starting Dopewars at http://$HOST:$PORT/"
+echo "Starting Harbour Hustle at http://$HOST:$PORT/"
 echo "Use HOST=0.0.0.0 or PORT=3000 to override defaults."
 
 ./node_modules/.bin/vite --host "$HOST" --port "$PORT"

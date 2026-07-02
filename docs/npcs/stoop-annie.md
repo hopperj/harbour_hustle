@@ -4,7 +4,7 @@
 
 - NPC id: `stoop-annie`
 - NPC type: Street intel contact
-- Location: Brooklyn
+- Location: Bedford
 - Interaction surface: Street Intel panel, buy intel, gift drugs, threaten
 
 ## Personality
@@ -14,7 +14,7 @@ Stoop Annie is tough, neighborhood-aware, and hard to impress. She is direct and
 ## Information Known
 
 - Can provide intel on market conditions, dealer behavior, police pressure, turf, and robbery opportunities.
-- Knows Brooklyn movement, dealer paranoia, and which crews are watching.
+- Knows Bedford movement, dealer paranoia, and which crews are watching.
 - Favorite gifts: Speed and Acid.
 - Has strong intel quality and enough toughness to resist threats.
 

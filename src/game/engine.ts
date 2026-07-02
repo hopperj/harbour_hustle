@@ -3,6 +3,7 @@ import { normalizeSeed, randomInt, randomPrice } from "./rng";
 import type {
   CopConfig,
   DealerConfig,
+  DealerStock,
   DrugConfig,
   GameCommand,
   GameConfig,
@@ -25,6 +26,51 @@ function cloneState(state: GameState): GameState {
 
 function getLocation(config: GameConfig, id: string): LocationConfig {
   return config.locations.find((location) => location.id === id) ?? config.locations[0];
+}
+
+const LEGACY_LOCATION_IDS: Record<string, string> = {
+  bronx: "north-end-halifax",
+  ghetto: "spryfield",
+  "central-park": "halifax-public-gardens",
+  manhattan: "downtown-halifax",
+  "coney-island": "dartmouth",
+  brooklyn: "bedford",
+  queens: "sackville",
+  "staten-island": "eastern-passage",
+};
+
+const LEGACY_TEXT_REPLACEMENTS: Array<[string, string]> = [
+  ["Bronx", "North End Halifax"],
+  ["Ghetto", "Spryfield"],
+  ["Central Park", "Halifax Public Gardens"],
+  ["Manhattan", "Downtown Halifax"],
+  ["Coney Island", "Dartmouth"],
+  ["Brooklyn", "Bedford"],
+  ["Queens", "Sackville"],
+  ["Staten Island", "Eastern Passage"],
+  ["Subway Sue", "Barrington Sue"],
+  ["Brooklyn Rose", "Bedford Rose"],
+  ["Queens Vic", "Sackville Vic"],
+];
+
+function normalizeLocationId(config: GameConfig, locationId: string | undefined): string {
+  if (locationId && config.locations.some((location) => location.id === locationId)) {
+    return locationId;
+  }
+
+  const migrated = locationId ? LEGACY_LOCATION_IDS[locationId] : undefined;
+  if (migrated && config.locations.some((location) => location.id === migrated)) {
+    return migrated;
+  }
+
+  return config.locations[0].id;
+}
+
+function migrateLegacyText(text: string): string {
+  return LEGACY_TEXT_REPLACEMENTS.reduce(
+    (current, [from, to]) => current.replaceAll(from, to).replaceAll(from.toUpperCase(), to.toUpperCase()),
+    text,
+  );
 }
 
 function getDrug(config: GameConfig, id: string): DrugConfig {
@@ -55,6 +101,10 @@ function getDealer(config: GameConfig, id: string): DealerConfig {
   return dealer;
 }
 
+function dealerDisplayName(config: GameConfig, dealer: DealerConfig): string {
+  return `${dealer.name} (${getLocation(config, dealer.locationId).name})`;
+}
+
 function getHobo(config: GameConfig, id: string): HoboConfig {
   const hobo = config.hobos.find((item) => item.id === id);
   if (!hobo) {
@@ -78,6 +128,19 @@ function marketQuote(state: GameState, drugId: string): MarketQuote {
 function marketBidPrice(config: GameConfig, state: GameState, drug: DrugConfig): number {
   const quote = marketQuote(state, drug.id);
   return quote.bidPrice ?? (quote.price > 0 ? quote.price : Math.floor((drug.minPrice + drug.maxPrice) / 2));
+}
+
+function dealerStockAmount(state: GameState, dealerId: string, drugId: string): number {
+  return Math.max(0, state.dealerStock?.[dealerId]?.[drugId] ?? 0);
+}
+
+function setDealerStockAmount(state: GameState, dealerId: string, drugId: string, amount: number): void {
+  state.dealerStock[dealerId] ??= {};
+  state.dealerStock[dealerId][drugId] = Math.max(0, amount);
+}
+
+function adjustDealerStockAmount(state: GameState, dealerId: string, drugId: string, delta: number): void {
+  setDealerStockAmount(state, dealerId, drugId, dealerStockAmount(state, dealerId, drugId) + delta);
 }
 
 function dealerForTrade(config: GameConfig, state: GameState, dealerId: string | undefined, drugId: string): DealerConfig | null {
@@ -140,20 +203,21 @@ function textRoll(state: GameState, text: string, salt: number): number {
 }
 
 function withEh(state: GameState, text: string, chance = 62): string {
-  if (/\beh\b/i.test(text) || textRoll(state, text, 17) >= chance) {
+  if (/\b(eh|my guy)\b/i.test(text) || textRoll(state, text, 17) >= chance) {
     return text;
   }
 
+  const tag = textRoll(state, text, 19) < 34 ? "my guy" : "eh";
   if (text.endsWith("?")) {
-    return `${text.slice(0, -1)}, eh?`;
+    return `${text.slice(0, -1)}, ${tag}?`;
   }
   if (text.endsWith("!")) {
-    return `${text.slice(0, -1)}, eh!`;
+    return `${text.slice(0, -1)}, ${tag}!`;
   }
   if (text.endsWith(".")) {
-    return `${text.slice(0, -1)}, eh.`;
+    return `${text.slice(0, -1)}, ${tag}.`;
   }
-  return `${text}, eh`;
+  return `${text}, ${tag}`;
 }
 
 function withPoliceSorry(state: GameState, text: string, chance = 86): string {
@@ -213,6 +277,15 @@ function makeDealerRelationships(config: GameConfig): Record<string, number> {
   return Object.fromEntries(config.dealers.map((dealer) => [dealer.id, 0]));
 }
 
+function makeDealerStock(config: GameConfig): DealerStock {
+  return Object.fromEntries(
+    config.dealers.map((dealer) => [
+      dealer.id,
+      Object.fromEntries(dealer.drugIds.map((drugId) => [drugId, 0])),
+    ]),
+  );
+}
+
 function makeHoboRelationships(config: GameConfig): Record<string, number> {
   return Object.fromEntries(config.hobos.map((hobo) => [hobo.id, 0]));
 }
@@ -221,10 +294,55 @@ function makeLocationInfluence(config: GameConfig): Record<string, number> {
   return Object.fromEntries(config.locations.map((location) => [location.id, 0]));
 }
 
+function normalizeSavedLocationIds(config: GameConfig, state: GameState): void {
+  state.player.locationId = normalizeLocationId(config, state.player.locationId);
+
+  if (state.locationInfluence) {
+    const migratedInfluence = makeLocationInfluence(config);
+    for (const [locationId, influence] of Object.entries(state.locationInfluence)) {
+      const nextLocationId = normalizeLocationId(config, locationId);
+      migratedInfluence[nextLocationId] = clamp((migratedInfluence[nextLocationId] ?? 0) + influence, -100, 100);
+    }
+    state.locationInfluence = migratedInfluence;
+  }
+
+  if (state.intelReports) {
+    state.intelReports = state.intelReports.map((report) => ({
+      ...report,
+      locationId: normalizeLocationId(config, report.locationId),
+      sourceName: migrateLegacyText(report.sourceName),
+      text: migrateLegacyText(report.text),
+    }));
+  }
+
+  if (state.priceHistory) {
+    for (const entries of Object.values(state.priceHistory)) {
+      for (const entry of entries) {
+        entry.locationId = normalizeLocationId(config, entry.locationId);
+      }
+    }
+  }
+
+  if (state.eventLog) {
+    state.eventLog = state.eventLog.map((entry) => ({
+      ...entry,
+      text: migrateLegacyText(entry.text),
+    }));
+  }
+}
+
 function ensureStreetState(config: GameConfig, state: GameState): void {
   state.dealerRelationships ??= makeDealerRelationships(config);
   for (const dealer of config.dealers) {
     state.dealerRelationships[dealer.id] ??= 0;
+  }
+
+  state.dealerStock ??= makeDealerStock(config);
+  for (const dealer of config.dealers) {
+    state.dealerStock[dealer.id] ??= {};
+    for (const drugId of dealer.drugIds) {
+      state.dealerStock[dealer.id][drugId] ??= 0;
+    }
   }
 
   state.hoboRelationships ??= makeHoboRelationships(config);
@@ -464,7 +582,12 @@ function backfillHistoricalPriceHistory(config: GameConfig, state: GameState, se
 
 export function hydrateGameState(config: GameConfig, state: GameState): GameState {
   const next = cloneState(state);
+  normalizeSavedLocationIds(config, next);
+  const needsDealerStockRoll = !next.dealerStock;
   ensureDealerState(config, next);
+  if (needsDealerStockRoll && next.market?.length > 0) {
+    rollDealerStock(config, next);
+  }
   backfillHistoricalPriceHistory(config, next, state.rngState);
   return next;
 }
@@ -535,6 +658,137 @@ function nextIntelId(state: GameState): number {
   return Math.max(state.logIndex + 1, 1, ...state.intelReports.map((report) => report.id + 1));
 }
 
+function pickFlavorLine(state: GameState, key: string, variants: string[]): string {
+  return variants[textRoll(state, key, 71) % variants.length];
+}
+
+function hoserMarketIntelText(
+  config: GameConfig,
+  state: GameState,
+  hobo: HoboConfig,
+  drug: DrugConfig,
+  quote: MarketQuote,
+  accurate: boolean,
+): string {
+  if (accurate) {
+    if (quote.price > 0) {
+      return pickFlavorLine(state, `${hobo.id}-${drug.id}-market-hot`, [
+        `${hobo.name} says ${drug.name} is movin' here for ${formatMoney(config, quote.price)}, bud.`,
+        `${hobo.name} heard ${drug.name} is goin' for ${formatMoney(config, quote.price)} around here, eh.`,
+        `${hobo.name} says ${drug.name} is hotter than a Tims lineup at ${formatMoney(config, quote.price)}, my guy.`,
+      ]);
+    }
+
+    const bid = formatMoney(config, marketBidPrice(config, state, drug));
+    return pickFlavorLine(state, `${hobo.id}-${drug.id}-market-dry`, [
+      `${hobo.name} says ${drug.name} is dry as a winter boot here, but buyers are still sniffin' around ${bid}.`,
+      `${hobo.name} heard nobody's got ${drug.name} on hand, but folks'll still toss about ${bid} at it.`,
+      `${hobo.name} says ${drug.name} stock is gone for a rip, but bids are hangin' near ${bid}.`,
+    ]);
+  }
+
+  const location = randomChoice(state, config.locations);
+  return pickFlavorLine(state, `${hobo.id}-${drug.id}-${location.id}-market-fake`, [
+      `${hobo.name} swears ${drug.name} is about to blow up in ${location.name}, but that yarn's wobblier than a dory in chop.`,
+      `${hobo.name} heard ${drug.name} is gettin' hot in ${location.name}. Sounds like buddy's been into the sauce, eh.`,
+      `${hobo.name} says ${drug.name} is the next big rip in ${location.name}, but I'd check that twice, my guy.`,
+  ]);
+}
+
+function hoserDealerIntelText(
+  config: GameConfig,
+  state: GameState,
+  hobo: HoboConfig,
+  dealer: DealerConfig,
+  threshold: number,
+  accurate: boolean,
+): string {
+  const dealerName = dealerDisplayName(config, dealer);
+  if (accurate) {
+    return pickFlavorLine(state, `${hobo.id}-${dealer.id}-dealer-true`, [
+      `${hobo.name} says ${dealerName}'s ${dealer.traits.join("/")} and cuts folks off around relationship ${threshold}, eh.`,
+      `${hobo.name} heard ${dealerName}'s runnin' ${dealer.traits.join("/")} and won't deal once you slide past ${threshold}.`,
+      `${hobo.name} says ${dealerName}'s got a ${dealer.traits.join("/")} streak and a short fuse near ${threshold}, my guy.`,
+    ]);
+  }
+
+  return pickFlavorLine(state, `${hobo.id}-${dealer.id}-dealer-fake`, [
+    `${hobo.name} says ${dealerName} folds easier than a wet dart. That read smells like low tide.`,
+    `${hobo.name} figures ${dealerName} is easy to shove around. Feels fishier than the harbour, bud.`,
+    `${hobo.name} heard ${dealerName} is soft as a soggy Timbit. I'd not bet the rent on it, my guy.`,
+  ]);
+}
+
+function hoserPoliceIntelText(
+  state: GameState,
+  hobo: HoboConfig,
+  location: LocationConfig,
+  accurate: boolean,
+  presence: number,
+  fakeRisk?: string,
+): string {
+  if (accurate) {
+    return pickFlavorLine(state, `${hobo.id}-${location.id}-police-true`, [
+      `${hobo.name} says the cops in ${location.name} are sittin' ${riskLabel(presence)} at ${presence}%, sorry and nosy as hell.`,
+      `${hobo.name} heard ${location.name} is ${riskLabel(presence)} heat, about ${presence}%, eh.`,
+      `${hobo.name} says police pressure in ${location.name} is ${riskLabel(presence)} at ${presence}%. Lotta sorry badges sniffin' around, my guy.`,
+    ]);
+  }
+
+  return pickFlavorLine(state, `${hobo.id}-${location.id}-police-fake`, [
+    `${hobo.name} claims ${location.name} is ${fakeRisk}, then changes the story like a Leafs fan in April.`,
+    `${hobo.name} says ${location.name} is ${fakeRisk} heat, but the details are slippier than harbour ice.`,
+    `${hobo.name} calls ${location.name} ${fakeRisk}, but buddy can't keep the yarn straight, my guy.`,
+  ]);
+}
+
+function hoserTurfIntelText(
+  state: GameState,
+  hobo: HoboConfig,
+  location: LocationConfig,
+  influence: number,
+  accurate: boolean,
+): string {
+  if (accurate) {
+    return pickFlavorLine(state, `${hobo.id}-${location.id}-turf-true`, [
+      `${hobo.name} says your turf in ${location.name} is ${influenceLabel(influence)} (${influence}), bud.`,
+      `${hobo.name} heard your name in ${location.name} is sittin' ${influenceLabel(influence)} at ${influence}, eh.`,
+      `${hobo.name} says ${location.name} has you pegged ${influenceLabel(influence)} (${influence}). Keep your boots dry, my guy.`,
+    ]);
+  }
+
+  return pickFlavorLine(state, `${hobo.id}-${location.id}-turf-fake`, [
+    `${hobo.name} says everyone in ${location.name} is on your side. Sure, and the harbour's made of gravy, bud.`,
+    `${hobo.name} figures ${location.name} loves ya. That sounds too sweet by half, eh.`,
+    `${hobo.name} says ${location.name} is all yours, but the street's hummin' a different tune, my guy.`,
+  ]);
+}
+
+function hoserOpportunityIntelText(
+  config: GameConfig,
+  state: GameState,
+  hobo: HoboConfig,
+  dealer: DealerConfig,
+  accurate: boolean,
+): string {
+  const dealerName = dealerDisplayName(config, dealer);
+  if (accurate) {
+    const danger = dealer.toughness + dealer.guardCount * 24 + Math.floor(dealer.violence / 2);
+    return pickFlavorLine(state, `${hobo.id}-${dealer.id}-opportunity-true`, [
+      `${hobo.name} says ${dealerName} has fat pockets (${dealer.greed}) but danger's ${riskLabel(danger)}, bud.`,
+      `${hobo.name} heard ${dealerName}'s sittin' cash-rich (${dealer.greed}), but the danger reads ${riskLabel(danger)}, eh.`,
+      `${hobo.name} says ${dealerName}'s got enough cash to sink a dory (${dealer.greed}), but danger's ${riskLabel(danger)}, my guy.`,
+    ]);
+  }
+
+  return pickFlavorLine(state, `${hobo.id}-${dealer.id}-opportunity-fake`, [
+    `${hobo.name} says ${dealerName}'s got fat pockets and nobody ridin' shotgun. Feels fishier than the harbour, bud.`,
+    `${hobo.name} heard ${dealerName}'s carryin' enough cash to sink a dory, and he's all by his lonesome. Bit too perfect, eh?`,
+    `${hobo.name} says ${dealerName}'s carryin' a fistful o' loonies and no muscle. Sounds too good to be true, eh.`,
+    `${hobo.name} swears ${dealerName}'s loaded and flyin' solo. I'd bet my last Tims double-double there's a catch, my guy.`,
+  ]);
+}
+
 function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfig, accuracyModifier = 0): IntelReport {
   let topicIndex = 0;
   [state.rngState, topicIndex] = randomInt(state.rngState, 0, 5);
@@ -547,7 +801,9 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
   if (topic === "market") {
     const drug = randomChoice(state, config.drugs);
     const quote = marketQuote(state, drug.id);
-    if (accurate) {
+    if (hobo.dialogStyle === "hoser") {
+      text = hoserMarketIntelText(config, state, hobo, drug, quote, accurate);
+    } else if (accurate) {
       text = quote.price > 0
         ? `${hobo.name} says ${drug.name} is moving here at ${formatMoney(config, quote.price)}.`
         : `${hobo.name} says ${drug.name} has no street stock here, but buyers still bid near ${formatMoney(config, marketBidPrice(config, state, drug))}.`;
@@ -558,15 +814,25 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
   } else if (topic === "dealer") {
     const localDealers = dealersForLocation(config, state.player.locationId);
     const dealer = randomChoice(state, localDealers.length > 0 ? localDealers : config.dealers);
-    if (accurate) {
-      text = `${hobo.name} says ${dealer.name} is ${dealer.traits.join("/")} and cuts people off near relationship ${dealerRefusalThreshold(dealer, state)}.`;
+    const dealerName = dealerDisplayName(config, dealer);
+    if (hobo.dialogStyle === "hoser") {
+      text = hoserDealerIntelText(config, state, hobo, dealer, dealerRefusalThreshold(dealer, state), accurate);
+    } else if (accurate) {
+      text = `${hobo.name} says ${dealerName} is ${dealer.traits.join("/")} and cuts people off near relationship ${dealerRefusalThreshold(dealer, state)}.`;
     } else {
-      text = `${hobo.name} says ${dealer.name} looks easy to push around. That read feels thin.`;
+      text = `${hobo.name} says ${dealerName} looks easy to push around. That read feels thin.`;
     }
   } else if (topic === "police") {
     const location = randomChoice(state, config.locations);
     const presence = effectivePolicePresence(config, state, location);
-    if (accurate) {
+    if (hobo.dialogStyle === "hoser") {
+      if (accurate) {
+        text = hoserPoliceIntelText(state, hobo, location, accurate, presence);
+      } else {
+        const fakeRisk = randomChoice(state, ["LOW", "MED", "HIGH"]);
+        text = hoserPoliceIntelText(state, hobo, location, accurate, presence, fakeRisk);
+      }
+    } else if (accurate) {
       text = `${hobo.name} says police pressure in ${location.name} is ${riskLabel(presence)} at ${presence}%.`;
     } else {
       const fakeRisk = randomChoice(state, ["LOW", "MED", "HIGH"]);
@@ -575,19 +841,23 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
   } else if (topic === "turf") {
     const location = getLocation(config, state.player.locationId);
     const influence = locationInfluence(state, location.id);
-    if (accurate) {
+    if (hobo.dialogStyle === "hoser") {
+      text = hoserTurfIntelText(state, hobo, location, influence, accurate);
+    } else if (accurate) {
       text = `${hobo.name} says your turf in ${location.name} is ${influenceLabel(influence)} (${influence}).`;
     } else {
       text = `${hobo.name} says everyone in ${location.name} is on your side. The street does not quite agree.`;
     }
   } else {
     const dealer = randomChoice(state, config.dealers);
-    const location = getLocation(config, dealer.locationId);
-    if (accurate) {
+    const dealerName = dealerDisplayName(config, dealer);
+    if (hobo.dialogStyle === "hoser") {
+      text = hoserOpportunityIntelText(config, state, hobo, dealer, accurate);
+    } else if (accurate) {
       const danger = dealer.toughness + dealer.guardCount * 24 + Math.floor(dealer.violence / 2);
-      text = `${hobo.name} says ${dealer.name} in ${location.name} is cash-rich (${dealer.greed}) but danger ${riskLabel(danger)}.`;
+      text = `${hobo.name} says ${dealerName} is cash-rich (${dealer.greed}) but danger ${riskLabel(danger)}.`;
     } else {
-      text = `${hobo.name} says ${dealer.name} is carrying easy money and no backup. It sounds too clean.`;
+      text = `${hobo.name} says ${dealerName} is carrying easy money and no backup. It sounds too clean.`;
     }
   }
 
@@ -738,10 +1008,46 @@ function generateMarket(config: GameConfig, locationId: string, rngState: number
   };
 }
 
+function dealerStockChance(dealer: DealerConfig, quote: MarketQuote): number {
+  let chance = 72 + Math.floor(dealer.greed / 8) + Math.floor(dealer.connected / 12);
+  if (quote.deal === "cheap") {
+    chance += 10;
+  } else if (quote.deal === "expensive") {
+    chance -= 8;
+  }
+  return clamp(chance, 35, 95);
+}
+
+function rollDealerStock(config: GameConfig, state: GameState): void {
+  state.dealerStock = makeDealerStock(config);
+
+  for (const dealer of dealersForLocation(config, state.player.locationId)) {
+    for (const drugId of dealer.drugIds) {
+      const quote = marketQuote(state, drugId);
+      if (quote.price <= 0) {
+        continue;
+      }
+
+      let stockRoll = 0;
+      [state.rngState, stockRoll] = randomInt(state.rngState, 0, 100);
+      if (stockRoll >= dealerStockChance(dealer, quote)) {
+        continue;
+      }
+
+      const drug = getDrug(config, drugId);
+      const maxAmount = dealerStockMaxAmount(dealer, drug, quote);
+      let amount = 0;
+      [state.rngState, amount] = randomInt(state.rngState, 1, maxAmount + 1);
+      setDealerStockAmount(state, dealer.id, drugId, amount);
+    }
+  }
+}
+
 function rollMarket(config: GameConfig, state: GameState): string[] {
   const result = generateMarket(config, state.player.locationId, state.rngState);
   state.rngState = result.seed;
   state.market = result.market;
+  rollDealerStock(config, state);
   recordPriceHistory(config, state);
   return result.messages;
 }
@@ -1201,6 +1507,129 @@ function maybeDealerRetaliation(config: GameConfig, state: GameState, dealer: De
   }
 }
 
+interface DealerStashItem {
+  drug: DrugConfig;
+  amount: number;
+  unitValue: number;
+  value: number;
+}
+
+interface DealerStashTransfer {
+  taken: DealerStashItem[];
+  totalValue: number;
+  takenValue: number;
+  leftValue: number;
+}
+
+function dealerStockMaxAmount(dealer: DealerConfig, drug: DrugConfig, quote: MarketQuote): number {
+  const averagePrice = Math.max(1, Math.floor((drug.minPrice + drug.maxPrice) / 2));
+  let maxAmount = 1 + Math.floor(dealer.greed / 35) + Math.floor(dealer.connected / 60);
+
+  if (averagePrice < 100) {
+    maxAmount += 18;
+  } else if (averagePrice < 500) {
+    maxAmount += 10;
+  } else if (averagePrice < 1500) {
+    maxAmount += 6;
+  } else if (averagePrice < 5000) {
+    maxAmount += 4;
+  } else if (averagePrice < 14000) {
+    maxAmount += 2;
+  } else {
+    maxAmount += 1;
+  }
+
+  if (quote.deal === "cheap") {
+    maxAmount += 5;
+  } else if (quote.deal === "expensive") {
+    maxAmount = Math.max(1, Math.floor(maxAmount * 0.7));
+  }
+
+  if (quote.price <= Math.floor(averagePrice / 2)) {
+    maxAmount += 2;
+  } else if (quote.price >= averagePrice * 2) {
+    maxAmount = Math.max(1, Math.floor(maxAmount / 2));
+  }
+
+  return clamp(maxAmount, 1, 24);
+}
+
+function dealerStashFromStock(config: GameConfig, state: GameState, dealer: DealerConfig): DealerStashItem[] {
+  const stash: DealerStashItem[] = [];
+
+  for (const drugId of dealer.drugIds) {
+    const quote = marketQuote(state, drugId);
+    const amount = dealerStockAmount(state, dealer.id, drugId);
+    if (quote.price <= 0 || amount <= 0) {
+      continue;
+    }
+
+    const drug = getDrug(config, drugId);
+    stash.push({
+      drug,
+      amount,
+      unitValue: quote.price,
+      value: quote.price * amount,
+    });
+  }
+
+  return stash;
+}
+
+function rollDealerRobberyCash(state: GameState, dealer: DealerConfig, stashValue: number): number {
+  if (stashValue <= 0) {
+    return 0;
+  }
+
+  const minPercent = clamp(6 + Math.floor(dealer.greed / 20), 6, 18);
+  const maxPercent = clamp(24 + Math.floor(dealer.greed / 6) + Math.floor(dealer.connected / 10), minPercent + 1, 55);
+  let percent = 0;
+  [state.rngState, percent] = randomInt(state.rngState, minPercent, maxPercent + 1);
+  return Math.max(1, Math.floor((stashValue * percent) / 100));
+}
+
+function transferDealerStashToPlayer(state: GameState, stash: DealerStashItem[]): DealerStashTransfer {
+  const transfer: DealerStashTransfer = {
+    taken: [],
+    totalValue: stash.reduce((sum, item) => sum + item.value, 0),
+    takenValue: 0,
+    leftValue: 0,
+  };
+
+  const prioritized = [...stash].sort((a, b) => b.unitValue - a.unitValue);
+  for (const item of prioritized) {
+    const amount = Math.min(item.amount, state.player.space);
+    if (amount <= 0) {
+      transfer.leftValue += item.value;
+      continue;
+    }
+
+    state.player.drugs[item.drug.id].carried += amount;
+    state.player.space -= amount;
+
+    const value = amount * item.unitValue;
+    transfer.taken.push({
+      ...item,
+      amount,
+      value,
+    });
+    transfer.takenValue += value;
+    transfer.leftValue += item.value - value;
+  }
+
+  return transfer;
+}
+
+function clearDealerStashStock(state: GameState, dealerId: string, stash: DealerStashItem[]): void {
+  for (const item of stash) {
+    setDealerStockAmount(state, dealerId, item.drug.id, 0);
+  }
+}
+
+function formatDrugLoot(items: DealerStashItem[]): string {
+  return items.map((item) => `${item.amount} ${item.drug.name}`).join(", ");
+}
+
 function resolveDealerRobbery(config: GameConfig, state: GameState, dealer: DealerConfig): void {
   setDealerRelationship(state, dealer.id, -100);
   adjustReputation(state, -10 - Math.floor(dealer.connected / 25));
@@ -1217,21 +1646,52 @@ function resolveDealerRobbery(config: GameConfig, state: GameState, dealer: Deal
   [state.rngState, defendRoll] = randomInt(state.rngState, 0, Math.max(1, dealerDefense));
 
   if (attackRoll > defendRoll) {
-    let loot = 0;
-    [state.rngState, loot] = randomInt(state.rngState, 150, 1800 + dealer.toughness * 20 + dealer.greed * 18);
-    state.player.cash += loot;
-    pushLog(state, "good", withEh(state, withViolentSorry(state, `You shook down ${dealer.name} for ${formatMoney(config, loot)}.`, 84), 55));
+    const stash = dealerStashFromStock(config, state, dealer);
+    const transfer = transferDealerStashToPlayer(state, stash);
+    clearDealerStashStock(state, dealer.id, stash);
+    const cashLoot = rollDealerRobberyCash(state, dealer, transfer.totalValue);
+    state.player.cash += cashLoot;
 
-    const stockedDrugs = dealer.drugIds.filter((drugId) => marketQuote(state, drugId).price > 0);
-    if (stockedDrugs.length > 0 && state.player.space > 0) {
-      let drugIndex = 0;
-      let amount = 0;
-      [state.rngState, drugIndex] = randomInt(state.rngState, 0, stockedDrugs.length);
-      [state.rngState, amount] = randomInt(state.rngState, 1, Math.min(6, state.player.space) + 1);
-      const drug = getDrug(config, stockedDrugs[drugIndex]);
-      state.player.drugs[drug.id].carried += amount;
-      state.player.space -= amount;
-      pushLog(state, "good", withEh(state, withSwearing(state, `You grabbed ${amount} ${drug.name}.`, 35), 45));
+    if (transfer.totalValue > 0) {
+      pushLog(
+        state,
+        "good",
+        withEh(
+          state,
+          withViolentSorry(
+            state,
+            `You shook down ${dealer.name} for ${formatMoney(config, cashLoot)} cash from ${formatMoney(config, transfer.totalValue)} of stash.`,
+            84,
+          ),
+          55,
+        ),
+      );
+    } else {
+      pushLog(state, "warn", withEh(state, withSwearing(state, `${dealer.name}'s stash was empty, and the cash box was dead too.`, 45), 55));
+    }
+
+    if (transfer.taken.length > 0) {
+      pushLog(
+        state,
+        "good",
+        withEh(
+          state,
+          withSwearing(
+            state,
+            `You grabbed ${formatDrugLoot(transfer.taken)} worth ${formatMoney(config, transfer.takenValue)}.`,
+            35,
+          ),
+          45,
+        ),
+      );
+    }
+
+    if (transfer.leftValue > 0) {
+      pushLog(
+        state,
+        "warn",
+        withEh(state, `You left ${formatMoney(config, transfer.leftValue)} of ${dealer.name}'s stash behind because you could not carry it.`, 55),
+      );
     }
     maybeDealerRetaliation(config, state, dealer);
     return;
@@ -1304,6 +1764,7 @@ export function createGame(config: GameConfig, seed = Date.now()): GameState {
       player.date,
       player.turn,
     ),
+    dealerStock: makeDealerStock(config),
     dealerRelationships: makeDealerRelationships(config),
     hoboRelationships: makeHoboRelationships(config),
     locationInfluence: makeLocationInfluence(config),
@@ -1363,11 +1824,12 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
       const quote = marketQuote(state, command.drugId);
       const drug = getDrug(config, command.drugId);
       const cost = quote.price * amount;
+      const stock = dealer ? dealerStockAmount(state, dealer.id, drug.id) : 0;
       if (!dealer || !dealerCanTrade(config, state, dealer, drug.id)) {
         pushLog(state, "bad", dealer ? withEh(state, `${dealer.name} refuses to deal.`, 70) : `Nobody here deals ${drug.name}.`);
         return state;
       }
-      if (quote.price <= 0 || amount <= 0 || cost > state.player.cash || amount > state.player.space) {
+      if (quote.price <= 0 || amount <= 0 || amount > stock || cost > state.player.cash || amount > state.player.space) {
         pushLog(state, "bad", `You can't buy that much ${drug.name}.`);
         return state;
       }
@@ -1375,6 +1837,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
       state.player.space -= amount;
       state.player.drugs[drug.id].carried += amount;
       state.player.drugs[drug.id].totalValue += cost;
+      adjustDealerStockAmount(state, dealer.id, drug.id, -amount);
       adjustDealerRelationship(state, dealer.id, dealerTradeRelationshipGain(dealer, cost));
       adjustLocationInfluence(state, dealer.locationId, cost >= 5000 ? 2 : 1);
       if (cost >= 10000) {
@@ -1406,6 +1869,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
       state.player.space += amount;
       const revenue = bidPrice * amount;
       state.player.cash += revenue;
+      adjustDealerStockAmount(state, dealer.id, drug.id, amount);
       adjustDealerRelationship(state, dealer.id, dealerTradeRelationshipGain(dealer, revenue));
       adjustLocationInfluence(state, dealer.locationId, revenue >= 5000 ? 2 : 1);
       if (revenue >= 10000) {
@@ -1436,6 +1900,9 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
       inventory.totalValue = scaleDrugValue(inventory.carried, inventory.totalValue, amount);
       inventory.carried -= amount;
       state.player.space += amount;
+      if (dealer.drugIds.includes(drug.id)) {
+        adjustDealerStockAmount(state, dealer.id, drug.id, amount);
+      }
       adjustDealerRelationship(state, dealer.id, gain);
       adjustLocationInfluence(state, dealer.locationId, Math.max(1, Math.floor(gain / 4)));
       if (value >= 5000) {

@@ -1,6 +1,6 @@
 # Harbour Hustle
 
-Harbour Hustle is a fresh TypeScript web-app recreation of the classic Dopewars loop, currently focused on a faithful single-player terminal-style experience with Halifax-flavored NPC systems.
+Harbour Hustle is a fresh TypeScript web-app built around the classic street-trading loop, currently focused on a faithful single-player terminal-style experience with Halifax-flavored NPC systems.
 
 ## Current Features
 
@@ -11,7 +11,8 @@ Harbour Hustle is a fresh TypeScript web-app recreation of the classic Dopewars 
 - Robbery, gifting, reputation, turf, and combat mechanics.
 - Named street intel contacts with trust, threat, gift, and intel systems.
 - Historical price charts with missing-stock gaps.
-- West End Halifax, J-Wood, Chebucto Cam, Tims references, apologetic police, and adult-language flavor.
+- HRM-only travel map: Downtown Halifax, North End Halifax, West End Halifax, Dartmouth, Bedford, Sackville, Spryfield, Halifax Public Gardens, and Eastern Passage.
+- J-Wood, Chebucto Cam, Tims references, apologetic police, and adult-language flavor.
 - NPC context documents in `docs/npcs/` for future LLM-driven dialog.
 
 ## Requirements
@@ -57,6 +58,7 @@ npm run preview
 - `src/game/` - core game config, types, RNG, formatting, and engine logic.
 - `src/components/` - React UI panels and terminal controls.
 - `src/styles.css` - terminal visual system and responsive layout.
+- `docs/locations.md` - HRM location, service, and NPC placement map.
 - `docs/npcs/` - structured NPC context files for future LLM dialog generation.
 - `install.sh` - OS-aware dependency install helper.
 - `run.sh` - OS-aware local dev server helper.

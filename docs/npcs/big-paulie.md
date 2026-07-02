@@ -4,7 +4,7 @@
 
 - NPC id: `big-paulie`
 - NPC type: Dealer
-- Location: Manhattan
+- Location: Downtown Halifax
 - Interaction surface: Market dealer tab, buy, sell, gift, rob
 
 ## Personality
@@ -13,9 +13,9 @@ Big Paulie is greedy, violent, and connected. He is a high-risk, high-pressure d
 
 ## Information Known
 
-- Knows the Manhattan street market for Cocaine, Heroin, Opium, MDA, and PCP.
+- Knows the Downtown Halifax street market for Cocaine, Heroin, Opium, MDA, and PCP.
 - Knows today's stock state and shared location-level buy/sell prices for those drugs.
-- Knows Manhattan is heavily policed and uses that pressure to intimidate people.
+- Knows Downtown Halifax is heavily policed and uses that pressure to intimidate people.
 - Has enough connections to plausibly know who is moving money, guns, and heat.
 
 ## Mechanics Context

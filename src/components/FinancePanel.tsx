@@ -14,6 +14,8 @@ export function FinancePanel({ config, state, dispatch }: FinancePanelProps) {
   const [loanAmount, setLoanAmount] = useState("");
   const atBank = state.player.locationId === config.serviceLocations.bank;
   const atLoan = state.player.locationId === config.serviceLocations.loanShark;
+  const bankLocation = config.locations.find((location) => location.id === config.serviceLocations.bank)?.name ?? "unknown";
+  const loanLocation = config.locations.find((location) => location.id === config.serviceLocations.loanShark)?.name ?? "unknown";
 
   return (
     <section className="terminal-panel finance-panel" aria-label="Banking and debt">
@@ -49,7 +51,7 @@ export function FinancePanel({ config, state, dispatch }: FinancePanelProps) {
           <TerminalButton onClick={() => dispatch({ type: "withdraw", amount: parseAmount(bankAmount) })}>WITHDRAW</TerminalButton>
         </div>
       ) : (
-        <p className="panel-caption">Bank access: Bronx.</p>
+        <p className="panel-caption">Bank access: {bankLocation}.</p>
       )}
 
       {atLoan ? (
@@ -68,7 +70,7 @@ export function FinancePanel({ config, state, dispatch }: FinancePanelProps) {
           </TerminalButton>
         </div>
       ) : (
-        <p className="panel-caption">Loan shark: Bronx.</p>
+        <p className="panel-caption">Loan shark: {loanLocation}.</p>
       )}
     </section>
   );

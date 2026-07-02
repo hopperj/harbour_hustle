@@ -338,6 +338,7 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
                   <th>Drug</th>
                   <th>Market</th>
                   <th>Range</th>
+                  <th>Stock</th>
                   <th>Held</th>
                   <th>Trend</th>
                   <th>Qty</th>
@@ -348,12 +349,13 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
                 {dealerDrugs.map((drug) => {
                   const quote = state.market.find((item) => item.drugId === drug.id);
                   const price = quote?.price ?? 0;
+                  const stock = selectedDealer ? state.dealerStock?.[selectedDealer.id]?.[drug.id] ?? 0 : 0;
                   const bidPrice = bidPriceFor(drug, price, quote?.bidPrice);
                   const inventory = state.player.drugs[drug.id];
                   const amount = amountFor(drug.id);
-                  const maxBuy = price > 0 ? Math.min(Math.floor(state.player.cash / price), state.player.space) : 0;
+                  const maxBuy = price > 0 ? Math.min(stock, Math.floor(state.player.cash / price), state.player.space) : 0;
                   return (
-                    <tr key={drug.id} className={price === 0 ? "is-unavailable" : ""}>
+                    <tr key={drug.id} className={price === 0 || stock <= 0 ? "is-unavailable" : ""}>
                       <td>
                         <button className="drug-link" type="button" onClick={() => setSelectedDrugId(drug.id)}>
                           {drug.name}
@@ -361,13 +363,14 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
                       </td>
                       <td>
                         <span className="price-stack">
-                          <span>Buy: {price > 0 ? formatMoney(config, price) : "No stock"}</span>
+                          <span>Buy: {price > 0 && stock > 0 ? formatMoney(config, price) : "No stock"}</span>
                           <span>Sell: {formatMoney(config, bidPrice)}</span>
                         </span>
                       </td>
                       <td>
                         {formatMoney(config, drug.minPrice)}-{formatMoney(config, drug.maxPrice)}
                       </td>
+                      <td>{stock}</td>
                       <td>{inventory.carried}</td>
                       <td className={quote?.deal === "cheap" ? "money-good" : quote?.deal === "expensive" ? "money-bad" : ""}>
                         {trendFor(quote?.deal ?? "none")}
@@ -411,10 +414,17 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
                         </TerminalButton>
                         <TerminalButton
                           className="max-button"
-                          disabled={maxBuy <= 0 || state.pendingPrompt !== null}
-                          onClick={() => setAmounts((current) => ({ ...current, [drug.id]: String(maxBuy) }))}
+                          disabled={dealerRefuses || maxBuy <= 0 || state.pendingPrompt !== null}
+                          onClick={() => dispatch({ type: "buyDrug", dealerId: selectedDealer.id, drugId: drug.id, amount: maxBuy })}
                         >
-                          MAX
+                          MAX BUY
+                        </TerminalButton>
+                        <TerminalButton
+                          className="max-button"
+                          disabled={dealerRefuses || inventory.carried <= 0 || bidPrice <= 0 || state.pendingPrompt !== null}
+                          onClick={() => dispatch({ type: "sellDrug", dealerId: selectedDealer.id, drugId: drug.id, amount: inventory.carried })}
+                        >
+                          MAX SELL
                         </TerminalButton>
                       </td>
                     </tr>

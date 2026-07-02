@@ -4,7 +4,7 @@
 
 - NPC id: `scratchy-lou`
 - NPC type: Street intel contact
-- Location: Ghetto
+- Location: Spryfield
 - Interaction surface: Street Intel panel, buy intel, gift drugs, threaten
 
 ## Personality
@@ -14,7 +14,7 @@ Scratchy Lou is tougher than he looks and more willing to push back than most st
 ## Information Known
 
 - Can provide intel on market conditions, dealer behavior, police pressure, turf, and robbery opportunities.
-- Knows local Ghetto street movement and can comment on violent dealers.
+- Knows local Spryfield street movement and can comment on violent dealers.
 - Favorite gifts: Speed and PCP.
 - Can read whether the player is feared, respected, or just broke.
 

@@ -1,4 +1,4 @@
-import { formatDate, formatMoney } from "../game/format";
+import { formatMoney } from "../game/format";
 import { netWorth, totalCapacity } from "../game/engine";
 import type { GameConfig, GameState } from "../game/types";
 
@@ -13,9 +13,8 @@ export function StatusBar({ config, state }: StatusBarProps) {
 
   return (
     <header className="status-grid" aria-label="Game status">
-      <div className="brand">DOPEWARS</div>
-      <div>{formatDate(player.date)}</div>
-      <div>{location.name.toUpperCase()}</div>
+      <div className="brand">HARBOUR HUSTLE</div>
+      <div className="status-location">{location.name.toUpperCase()}</div>
       <div className="money-good">CASH {formatMoney(config, player.cash)}</div>
       <div className="money-bad">DEBT {formatMoney(config, player.debt)}</div>
       <div>BANK {formatMoney(config, player.bank)}</div>

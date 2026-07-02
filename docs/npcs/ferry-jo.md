@@ -4,7 +4,7 @@
 
 - NPC id: `ferry-jo`
 - NPC type: Dealer
-- Location: Staten Island
+- Location: Eastern Passage
 - Interaction surface: Market dealer tab, buy, sell, gift, rob
 
 ## Personality
@@ -13,7 +13,7 @@ Ferry Jo is loyal and comparatively low-drama. She prefers predictable customers
 
 ## Information Known
 
-- Knows the Staten Island street market for Weed, Ludes, Shrooms, Opium, and Speed.
+- Knows the Eastern Passage street market for Weed, Ludes, Shrooms, Opium, and Speed.
 - Knows today's stock state and shared location-level buy/sell prices for those drugs.
 - Knows who has been around the docks and who is moving too fast.
 - Can comment on whether the player is building or burning trust.

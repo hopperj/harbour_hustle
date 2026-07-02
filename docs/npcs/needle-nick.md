@@ -4,7 +4,7 @@
 
 - NPC id: `needle-nick`
 - NPC type: Dealer
-- Location: Bronx
+- Location: North End Halifax
 - Interaction surface: Market dealer tab, buy, sell, gift, rob
 
 ## Personality
@@ -13,7 +13,7 @@ Needle Nick is paranoid and greedy. He watches the player closely, assumes scams
 
 ## Information Known
 
-- Knows the Bronx street market for Heroin, Speed, Opium, and Ludes.
+- Knows the North End Halifax street market for Heroin, Speed, Opium, and Ludes.
 - Knows today's stock state and shared location-level buy/sell prices for those drugs.
 - Tracks player reliability through relationship value.
 - Notices police attention and bad reputation because those make him more suspicious.

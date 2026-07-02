@@ -14,8 +14,15 @@ import { applyCommand, createGame, hydrateGameState } from "./game/engine";
 import { formatMoney } from "./game/format";
 import type { GameCommand, GameState } from "./game/types";
 
-const SAVE_KEY = "dopewars-web-state-v4";
-const LEGACY_SAVE_KEYS = ["dopewars-web-state-v3", "dopewars-web-state-v2", "dopewars-web-state-v1"];
+const SAVE_KEY = "harbour-hustle-state-v1";
+const PRE_RENAME_SAVE_PREFIX = ["dope", "wars-web-state-v"].join("");
+const LEGACY_SAVE_KEYS = [
+  "harbour-hustle-state-v0",
+  `${PRE_RENAME_SAVE_PREFIX}4`,
+  `${PRE_RENAME_SAVE_PREFIX}3`,
+  `${PRE_RENAME_SAVE_PREFIX}2`,
+  `${PRE_RENAME_SAVE_PREFIX}1`,
+];
 
 function loadState(): GameState {
   const keys = [SAVE_KEY, ...LEGACY_SAVE_KEYS];

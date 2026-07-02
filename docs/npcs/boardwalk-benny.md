@@ -4,7 +4,7 @@
 
 - NPC id: `boardwalk-benny`
 - NPC type: Street intel contact
-- Location: Coney Island
+- Location: Dartmouth
 - Interaction surface: Street Intel panel, buy intel, gift drugs, threaten
 
 ## Personality
@@ -14,7 +14,7 @@ Boardwalk Benny is casual, watchful, and good at overhearing loose talk. He is n
 ## Information Known
 
 - Can provide intel on market conditions, dealer behavior, police pressure, turf, and robbery opportunities.
-- Knows Coney Island dealers, casual buyers, and low-end supply shifts.
+- Knows Dartmouth dealers, casual buyers, and low-end supply shifts.
 - Favorite gifts: Weed and Hashish.
 - Can comment on whether a story sounds too clean or too lucky.
 

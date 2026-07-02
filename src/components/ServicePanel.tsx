@@ -14,6 +14,8 @@ export function ServicePanel({ config, state, dispatch }: ServicePanelProps) {
   const [helperAmount, setHelperAmount] = useState("1");
   const atGunShop = state.player.locationId === config.serviceLocations.gunShop;
   const atPub = state.player.locationId === config.serviceLocations.roughPub;
+  const gunShopLocation = config.locations.find((location) => location.id === config.serviceLocations.gunShop)?.name ?? "unknown";
+  const pubLocation = config.locations.find((location) => location.id === config.serviceLocations.roughPub)?.name ?? "unknown";
 
   return (
     <section className="terminal-panel service-panel" aria-label="Local services">
@@ -60,7 +62,7 @@ export function ServicePanel({ config, state, dispatch }: ServicePanelProps) {
           </table>
         </div>
       ) : (
-        <p className="panel-caption">{config.names.gunShop}: Ghetto.</p>
+        <p className="panel-caption">{config.names.gunShop}: {gunShopLocation}.</p>
       )}
 
       {atPub ? (
@@ -85,7 +87,7 @@ export function ServicePanel({ config, state, dispatch }: ServicePanelProps) {
           </div>
         </div>
       ) : (
-        <p className="panel-caption">{config.names.roughPub}: Ghetto.</p>
+        <p className="panel-caption">{config.names.roughPub}: {pubLocation}.</p>
       )}
     </section>
   );

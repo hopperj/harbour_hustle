@@ -4,7 +4,7 @@
 
 - NPC id: `rail-yard-ray`
 - NPC type: Street intel contact
-- Location: Queens
+- Location: Sackville
 - Interaction surface: Street Intel panel, buy intel, gift drugs, threaten
 
 ## Personality
@@ -14,7 +14,7 @@ Rail Yard Ray is patient, mechanical, and observant. He tracks movement like sch
 ## Information Known
 
 - Can provide intel on market conditions, dealer behavior, police pressure, turf, and robbery opportunities.
-- Knows Queens routes, quiet deals, and who is carrying too much confidence.
+- Knows Sackville routes, quiet deals, and who is carrying too much confidence.
 - Favorite gifts: Opium and Peyote.
 - Can frame information as timing, routes, and risk.
 

@@ -123,7 +123,7 @@ p {
 
 .status-grid {
   display: grid;
-  grid-template-columns: minmax(16rem, 1.55fr) repeat(9, minmax(6.5rem, 1fr));
+  grid-template-columns: minmax(18rem, 1.7fr) repeat(10, minmax(6.5rem, 1fr));
   border: 1px solid var(--border);
   background: var(--panel-strong);
   box-shadow: 0 0 1.2rem rgba(49, 255, 37, 0.13);
@@ -146,10 +146,16 @@ p {
 }
 
 .brand {
+  grid-column: span 2;
   font-size: clamp(1.9rem, 3.4vw, 2.65rem);
   font-weight: 900;
+  line-height: 0.95;
   color: var(--text);
   text-shadow: 0 0 1rem var(--shadow);
+}
+
+.status-location {
+  grid-column: span 2;
 }
 
 .app-grid {
@@ -568,7 +574,7 @@ p {
 }
 
 .max-button {
-  min-inline-size: 3.4rem;
+  min-inline-size: 5.8rem;
 }
 
 .capacity-meter {
@@ -602,15 +608,22 @@ p {
 
 .travel-row {
   grid-template-columns: minmax(0, 1fr) 4rem 4rem 3.5rem;
+  column-gap: 0.35rem;
   justify-content: stretch;
   inline-size: 100%;
   text-align: start;
+  place-items: center stretch;
 }
 
 .travel-row span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.travel-row span:first-child {
+  line-height: 1.15;
+  white-space: normal;
 }
 
 .travel-row.is-active {
@@ -779,6 +792,10 @@ p {
     grid-column: 1 / -1;
   }
 
+  .status-location {
+    grid-column: span 2;
+  }
+
   .app-grid {
     grid-template-columns: minmax(18rem, 0.75fr) minmax(25rem, 1.25fr);
   }
@@ -808,6 +825,10 @@ p {
   .status-grid > div {
     min-block-size: 2.8rem;
     border-block-end: 1px solid var(--border-soft);
+  }
+
+  .status-location {
+    grid-column: 1 / -1;
   }
 
   .left-column,
@@ -863,8 +884,8 @@ p {
 
   .market-table th:nth-child(3),
   .market-table td:nth-child(3),
-  .market-table th:nth-child(5),
-  .market-table td:nth-child(5) {
+  .market-table th:nth-child(6),
+  .market-table td:nth-child(6) {
     display: none;
   }
 
@@ -888,9 +909,13 @@ p {
   }
 
   .market-table .terminal-button {
-    min-inline-size: 3.7rem;
+    min-inline-size: 4rem;
     min-block-size: 1.8rem;
     padding-inline: 0.35rem;
+  }
+
+  .market-table .max-button {
+    min-inline-size: 5.5rem;
   }
 
   .chart-toolbar {
