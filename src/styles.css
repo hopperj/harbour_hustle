@@ -771,6 +771,99 @@ p {
   gap: 0.5rem;
 }
 
+.outcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 3vw, 2rem);
+  background: rgba(0, 0, 0, 0.74);
+}
+
+.outcome-dialog {
+  inline-size: min(44rem, 100%);
+  max-block-size: min(84vh, 48rem);
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--panel-strong);
+  box-shadow: 0 0 0 1px rgba(135, 255, 102, 0.12), 0 0 2rem rgba(49, 255, 37, 0.18);
+  padding: clamp(0.85rem, 2vw, 1.25rem);
+}
+
+.outcome-dialog--good {
+  border-color: var(--good);
+}
+
+.outcome-dialog--warn {
+  border-color: var(--warn);
+}
+
+.outcome-dialog--bad {
+  border-color: var(--bad);
+}
+
+.outcome-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-block-end: 1px dashed var(--border-soft);
+  padding-block-end: 0.75rem;
+}
+
+.outcome-header .panel-caption {
+  margin-block-end: 0.25rem;
+}
+
+.outcome-close {
+  min-inline-size: 5.5rem;
+}
+
+.outcome-log {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0;
+  margin: 0.85rem 0 0;
+  list-style: none;
+}
+
+.outcome-entry {
+  display: grid;
+  grid-template-columns: 6.8rem minmax(0, 1fr);
+  gap: 0.75rem;
+  line-height: 1.35;
+}
+
+.outcome-entry span:first-child {
+  color: var(--muted);
+}
+
+.outcome-entry--good span:last-child {
+  color: var(--good);
+}
+
+.outcome-entry--warn span:last-child {
+  color: var(--warn);
+}
+
+.outcome-entry--bad span:last-child {
+  color: var(--bad);
+}
+
+.outcome-prompt {
+  display: grid;
+  gap: 0.65rem;
+  border-block-start: 1px dashed var(--border-soft);
+  margin-block-start: 0.85rem;
+  padding-block-start: 0.85rem;
+}
+
+.outcome-prompt p {
+  color: var(--warn);
+  margin: 0;
+}
+
 .game-over-panel {
   border-color: var(--bad);
   background: rgba(36, 5, 2, 0.96);
@@ -954,6 +1047,15 @@ p {
   .intel-feed li {
     grid-template-columns: 1fr;
     gap: 0.08rem;
+  }
+
+  .outcome-header,
+  .outcome-entry {
+    grid-template-columns: 1fr;
+  }
+
+  .outcome-header {
+    display: grid;
   }
 
   .market-table .command-cell {

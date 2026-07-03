@@ -2,6 +2,12 @@
 
 All notable changes to Harbour Hustle are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Added action-report overlays for robbery, combat, intel purchases, hobo threats, and follow-up prompt choices.
+
 ## [0.9.0] - 2026-07-03
 
 ### Added

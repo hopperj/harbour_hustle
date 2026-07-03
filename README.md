@@ -19,6 +19,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full change history.
 - Stay-in-place and travel actions, each advancing the simulation.
 - Dealer-specific drug coverage, stock, relationship thresholds, gifting, robbery, retaliation, combat, and reputation effects.
 - Named street intel contacts with trust, threats, gifts, paid intel, and conversational dialog options.
+- Action-report overlays for robbery, combat, intel purchases, threats, and follow-up dialog choices.
 - Market price history and per-drug price charts, including simulated history before day one and gaps when a drug was unavailable.
 - Player-facing Halifax flavor: Tims, Timbits, hoser phrasing, "eh", "my guy", apologetic police, swearing, and local NPC personalities.
 - Canadian improvised weapon shop replacing firearms: tire iron, glass Coke-a-Cola bottle, sock full of loonies, sharpened hockey stick, Zamboni-part mace, bow and arrow, and more.
