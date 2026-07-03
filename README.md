@@ -30,6 +30,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full change history.
 - macOS or Linux.
 - Node.js `20.19+` or `22.12+`.
 - npm.
+- `zip` and `unzip` for release packaging.
 
 ## Install
 
@@ -63,6 +64,30 @@ npm run build
 npm run preview
 ```
 
+## Package a Shareable Build
+
+The release version is stored in `VERSION`.
+
+Create a shareable static web zip with:
+
+```bash
+./package.sh
+```
+
+The script runs a production build and writes:
+
+```text
+harbour-hustle-<version>.zip
+```
+
+For example, if `VERSION` contains `0.9.0`, the output is:
+
+```text
+harbour-hustle-0.9.0.zip
+```
+
+The zip contains the built `index.html` and `assets/` files at the archive root. Git files and metadata such as `.git`, `.gitignore`, `.gitattributes`, and `.gitmodules` are excluded, and packaging fails if any are detected.
+
 ## Project Structure
 
 - `src/game/` - core game config, types, RNG, formatting, and engine logic.
@@ -73,6 +98,7 @@ npm run preview
 - `docs/concepts/` - concept and QA screenshots captured during UI development.
 - `install.sh` - OS-aware dependency install helper.
 - `run.sh` - OS-aware local dev server helper.
+- `package.sh` - builds and zips a shareable release from `VERSION`.
 
 ## Notes
 
