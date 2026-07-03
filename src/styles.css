@@ -37,7 +37,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
   letter-spacing: 0;
 }
@@ -46,20 +47,31 @@ button {
   color: inherit;
 }
 
-input {
+input,
+textarea {
   min-inline-size: 0;
   inline-size: 100%;
-  block-size: 2rem;
   border: 1px solid var(--border-soft);
   border-radius: 0;
   background: #020802;
   color: var(--focus);
-  padding: 0 0.55rem;
   outline: none;
   box-shadow: inset 0 0 0.75rem rgba(63, 255, 49, 0.08);
 }
 
-input:focus {
+input {
+  block-size: 2rem;
+  padding: 0 0.55rem;
+}
+
+textarea {
+  min-block-size: 5.5rem;
+  padding: 0.55rem;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
   border-color: var(--focus);
   box-shadow: 0 0 0 1px var(--focus), 0 0 1rem rgba(230, 255, 138, 0.16);
 }
@@ -386,6 +398,12 @@ p {
   margin-block: 0.65rem 0;
   color: var(--warn);
   text-transform: uppercase;
+}
+
+.dealer-actions {
+  display: grid;
+  gap: 0.5rem;
+  min-inline-size: 5.5rem;
 }
 
 .dealer-line {
@@ -855,6 +873,87 @@ p {
   color: var(--bad);
 }
 
+.outcome-npc-line {
+  display: grid;
+  gap: 0.35rem;
+  border-block-start: 1px dashed var(--border-soft);
+  margin-block-start: 0.85rem;
+  padding-block-start: 0.85rem;
+}
+
+.outcome-npc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.outcome-npc-line p {
+  color: var(--warn);
+  margin: 0;
+}
+
+.conversation-dialog {
+  inline-size: min(48rem, 100%);
+}
+
+.conversation-log {
+  display: grid;
+  gap: 0.65rem;
+  max-block-size: 20rem;
+  overflow: auto;
+  padding: 0;
+  margin: 0.85rem 0 0;
+  list-style: none;
+  scrollbar-color: var(--border) #020802;
+}
+
+.conversation-message {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border-soft);
+  background: rgba(2, 8, 2, 0.52);
+  padding: 0.55rem 0.65rem;
+}
+
+.conversation-message span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.conversation-message p {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.conversation-message--npc p {
+  color: var(--warn);
+}
+
+.conversation-message--player {
+  border-color: rgba(230, 255, 138, 0.42);
+}
+
+.conversation-form {
+  display: grid;
+  gap: 0.55rem;
+  border-block-start: 1px dashed var(--border-soft);
+  margin-block-start: 0.85rem;
+  padding-block-start: 0.85rem;
+}
+
+.conversation-form label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.conversation-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .outcome-prompt {
   display: grid;
   gap: 0.65rem;
@@ -864,6 +963,19 @@ p {
 }
 
 .outcome-prompt p {
+  color: var(--warn);
+  margin: 0;
+}
+
+.outcome-followups {
+  display: grid;
+  gap: 0.65rem;
+  border-block-start: 1px dashed var(--border-soft);
+  margin-block-start: 0.85rem;
+  padding-block-start: 0.85rem;
+}
+
+.outcome-followups p {
   color: var(--warn);
   margin: 0;
 }
@@ -1054,11 +1166,13 @@ p {
   }
 
   .outcome-header,
+  .outcome-npc-header,
   .outcome-entry {
     grid-template-columns: 1fr;
   }
 
-  .outcome-header {
+  .outcome-header,
+  .outcome-npc-header {
     display: grid;
   }
 

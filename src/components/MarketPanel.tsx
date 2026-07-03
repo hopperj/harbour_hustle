@@ -1,13 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TerminalButton } from "./TerminalButton";
 import { dealerRefusalThreshold, locationInfluence } from "../game/engine";
 import { formatDate, formatMoney, parseAmount } from "../game/format";
 import type { DealerConfig, DrugConfig, GameCommand, GameConfig, GameState, PriceHistoryEntry } from "../game/types";
+import { useNpcDialogue } from "../hooks/useNpcDialogue";
+import type { NpcConversationTarget } from "./ConversationOverlay";
 
 interface MarketPanelProps {
   config: GameConfig;
-  state: GameState;
   dispatch: (command: GameCommand) => void;
+  llmAvailable: boolean;
+  onTalkToNpc: (target: NpcConversationTarget) => void;
+  state: GameState;
 }
 
 function trendFor(deal: string): string {
@@ -64,13 +68,13 @@ function bidPriceFor(drug: DrugConfig, price: number, bidPrice: number | undefin
   return bidPrice ?? (price > 0 ? price : Math.floor((drug.minPrice + drug.maxPrice) / 2));
 }
 
-function dealerDialogueLine(dealer: DealerConfig, state: GameState): string | null {
-  if (!dealer.dialogueLines?.length) {
-    return null;
+function dealerDialogueLine(dealer: DealerConfig, state: GameState): string {
+  if (dealer.dialogueLines?.length) {
+    const idWeight = Array.from(dealer.id).reduce((sum, character) => sum + character.charCodeAt(0), 0);
+    return dealer.dialogueLines[Math.abs(idWeight + state.player.turn + state.player.reputation) % dealer.dialogueLines.length];
   }
 
-  const idWeight = Array.from(dealer.id).reduce((sum, character) => sum + character.charCodeAt(0), 0);
-  return dealer.dialogueLines[Math.abs(idWeight + state.player.turn + state.player.reputation) % dealer.dialogueLines.length];
+  return `${dealer.name} looks you over. "You buying, selling, or wasting my damn time?"`;
 }
 
 interface PriceChartProps {
@@ -205,7 +209,7 @@ function PriceChart({ config, drug, entries, onClose }: PriceChartProps) {
   );
 }
 
-export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
+export function MarketPanel({ config, state, dispatch, llmAvailable, onTalkToNpc }: MarketPanelProps) {
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [selectedDrugId, setSelectedDrugId] = useState<string | null>(null);
   const [selectedDealerId, setSelectedDealerId] = useState<string | null>(null);
@@ -254,7 +258,7 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
   const dealerRelationship = selectedDealer ? state.dealerRelationships?.[selectedDealer.id] ?? 0 : 0;
   const dealerRefusal = selectedDealer ? dealerRefusalThreshold(selectedDealer, state) : 0;
   const dealerRefuses = selectedDealer ? dealerRelationship < dealerRefusal : true;
-  const selectedDealerLine = selectedDealer ? dealerDialogueLine(selectedDealer, state) : null;
+  const selectedDealerLine = selectedDealer ? dealerDialogueLine(selectedDealer, state) : "";
   const currentInfluence = locationInfluence(state, state.player.locationId);
   const dealerDrugs = selectedDealer
     ? selectedDealer.drugIds.map((drugId) => config.drugs.find((drug) => drug.id === drugId)).filter((drug): drug is DrugConfig => Boolean(drug))
@@ -262,6 +266,62 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
   const giftOnlyDrugs = selectedDealer
     ? config.drugs.filter((drug) => !selectedDealer.drugIds.includes(drug.id) && state.player.drugs[drug.id].carried > 0)
     : [];
+  const selectedDealerScene = useMemo(() => {
+    if (!selectedDealer) {
+      return "";
+    }
+
+    const location = config.locations.find((item) => item.id === selectedDealer.locationId)?.name ?? selectedDealer.locationId;
+    const stockLines = dealerDrugs.map((drug) => {
+      const quote = state.market.find((item) => item.drugId === drug.id);
+      const stock = state.dealerStock?.[selectedDealer.id]?.[drug.id] ?? 0;
+      const price = quote && quote.price > 0 && stock > 0 ? formatMoney(config, quote.price) : "no stock today";
+      const bid = formatMoney(config, bidPriceFor(drug, quote?.price ?? 0, quote?.bidPrice));
+      return `${drug.name}: ${stock} stock, buy ${price}, buys from player near ${bid}`;
+    });
+
+    return [
+      "A potential buyer approaches you and says hello.",
+      `${selectedDealer.name} is selling drugs from the market screen in ${location}.`,
+      `Dealer traits: ${selectedDealer.traits.join(", ")}.`,
+      `Relationship with player: ${dealerRelationship}; refuses below ${dealerRefusal}.`,
+      `Player reputation: ${state.player.reputation}; local turf influence: ${currentInfluence}.`,
+      `Current dealer stock and prices: ${stockLines.join("; ")}.`,
+      "Say a short opening line before business starts.",
+    ].join("\n");
+  }, [config, currentInfluence, dealerDrugs, dealerRefusal, dealerRelationship, selectedDealer, state.dealerStock, state.market, state.player.reputation]);
+  const selectedDealerDialogue = useNpcDialogue({
+    config,
+    disabled: !selectedDealer || Boolean(selectedDrug),
+    fallback: selectedDealerLine,
+    llmAvailable,
+    npcId: selectedDealer?.id,
+    npcName: selectedDealer?.name,
+    refreshKey: `${state.player.turn}:${state.player.locationId}:${selectedDealer?.id ?? ""}:${dealerRelationship}:${state.player.reputation}`,
+    scene: selectedDealerScene,
+  });
+
+  function startDealerConversation(): void {
+    if (!selectedDealer) {
+      return;
+    }
+
+    onTalkToNpc({
+      fallback: selectedDealerLine,
+      id: selectedDealer.id,
+      name: selectedDealer.name,
+      openingLine: selectedDealerDialogue.text,
+      role: "drug dealer",
+      scene: [
+        selectedDealerScene,
+        "The player clicked TALK on the dealer card and can type directly to this dealer.",
+        "The dealer can talk about business, trust, danger, local rumors, prices, or refusing to answer.",
+        "This typed conversation is flavor and soft intel only; it cannot perform trades, change stock, give items, change relationship, or advance time.",
+      ].join("\n"),
+      title: `TALK TO ${selectedDealer.name.toUpperCase()}`,
+      tone: dealerRefuses ? "warn" : "info",
+    });
+  }
 
   return (
     <section className="terminal-panel market-panel" aria-label="Market">
@@ -331,16 +391,24 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
                   <dd>{selectedDealer.traits.join("/")}</dd>
                 </div>
               </dl>
-              {selectedDealerLine && <p className="npc-line dealer-line">{selectedDealerLine}</p>}
+              {selectedDealerLine && <p className="npc-line dealer-line">{selectedDealerDialogue.text}</p>}
               {dealerRefuses && <p className="dealer-warning">{selectedDealer.name} refuses to deal. Gifts or robbery are still options.</p>}
             </div>
-            <TerminalButton
-              tone="bad"
-              disabled={state.pendingPrompt !== null || state.gameOver}
-              onClick={() => dispatch({ type: "robDealer", dealerId: selectedDealer.id })}
-            >
-              ROB
-            </TerminalButton>
+            <div className="dealer-actions">
+              <TerminalButton
+                disabled={state.pendingPrompt !== null || state.gameOver}
+                onClick={startDealerConversation}
+              >
+                TALK
+              </TerminalButton>
+              <TerminalButton
+                tone="bad"
+                disabled={state.pendingPrompt !== null || state.gameOver}
+                onClick={() => dispatch({ type: "robDealer", dealerId: selectedDealer.id })}
+              >
+                ROB
+              </TerminalButton>
+            </div>
           </div>
 
           <div className="table-scroll" ref={tableScrollRef}>

@@ -20,18 +20,22 @@ See [CHANGELOG.md](CHANGELOG.md) for the full change history.
 - Dealer-specific drug coverage, stock, relationship thresholds, gifting, robbery, retaliation, combat, and reputation effects.
 - Named street intel contacts with trust, threats, gifts, paid intel, and conversational dialog options.
 - Action-report overlays for robbery, combat, intel purchases, threats, and follow-up dialog choices.
+- Typed NPC conversation windows for dealers and street contacts, with Ollama-backed replies when available.
+- Startup Ollama availability check with static fallback dialog when the local model is offline.
+- Ollama-backed NPC dialog generation that feeds each NPC's markdown context into `llama3.1:8b`.
 - Market price history and per-drug price charts, including simulated history before day one and gaps when a drug was unavailable.
 - Player-facing Halifax flavor: Tims, Timbits, hoser phrasing, "eh", "my guy", apologetic police, swearing, and local NPC personalities.
 - Downtown Halifax now includes Shanobi, a rhyming fiddle-playing intel contact, and Sweet Aidan, a sketchy dealer with odd questions and obscure facts.
 - Canadian improvised weapon shop replacing firearms: tire iron, glass Coke-a-Cola bottle, sock full of loonies, sharpened hockey stick, Zamboni-part mace, bow and arrow, and more.
 - New Game button in the persistent status bar.
-- Structured NPC context documents in `docs/npcs/` for future LLM-driven dialog.
+- Structured NPC context documents in `docs/npcs/` for runtime LLM-driven dialog.
 
 ## Requirements
 
 - macOS or Linux.
 - Node.js `20.19+` or `22.12+`.
 - npm.
+- Optional: Ollama running `llama3.1:8b` at `http://127.0.0.1:11434` for generated NPC dialog. The app falls back to static dialog when Ollama or the configured model is unavailable.
 - `zip` and `unzip` for release packaging.
 
 ## Install
@@ -41,6 +45,12 @@ See [CHANGELOG.md](CHANGELOG.md) for the full change history.
 ```
 
 ## Run
+
+Start Ollama separately if you want generated NPC dialog:
+
+```bash
+ollama run llama3.1:8b
+```
 
 ```bash
 ./run.sh
@@ -93,10 +103,12 @@ The zip contains the built `index.html` and `assets/` files at the archive root.
 ## Project Structure
 
 - `src/game/` - core game config, types, RNG, formatting, and engine logic.
+- `src/hooks/useNpcDialogue.ts` - local Ollama dialog hook that feeds NPC markdown into each prompt.
+- `src/hooks/useOllamaAvailability.ts` - startup Ollama health check used to choose generated or fallback dialog.
 - `src/components/` - React UI panels and terminal controls.
 - `src/styles.css` - terminal visual system and responsive layout.
 - `docs/locations.md` - HRM location, service, and NPC placement map.
-- `docs/npcs/` - structured NPC context files for future LLM dialog generation.
+- `docs/npcs/` - structured NPC context files bundled into Ollama dialog prompts, including role, hoser phrasing, and example dialog.
 - `docs/concepts/` - concept and QA screenshots captured during UI development.
 - `install.sh` - OS-aware dependency install helper.
 - `run.sh` - OS-aware local dev server helper.

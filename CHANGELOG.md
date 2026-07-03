@@ -9,6 +9,16 @@ All notable changes to Harbour Hustle are documented here.
 - Added action-report overlays for robbery, combat, intel purchases, hobo threats, and follow-up prompt choices.
 - Added Shanobi as a Downtown Halifax street intel contact who plays fiddle and speaks in rhyme.
 - Added Sweet Aidan as a Downtown Halifax dealer with sketchy odd-question dialog and obscure-fact flavor.
+- Added Ollama-backed NPC dialog generation using `llama3.1:8b` and bundled NPC markdown context files.
+- Added explicit role-in-game context to every NPC file for runtime dialog prompting.
+- Added hoser saying references and character-specific example dialog to every NPC file.
+- Added a strict per-query Ollama system prompt that forces the model to stay in character as the active NPC.
+- Added typed NPC conversation windows and TALK buttons for dealers, street contacts, and action-report follow-up dialog.
+- Added a startup Ollama availability check with static fallback dialog when the configured model is offline.
+
+### Changed
+
+- Changed deterministic street intel entries to display as mechanical summaries so generated NPC lines carry the spoken dialog.
 
 ## [0.9.0] - 2026-07-03
 
@@ -41,7 +51,7 @@ All notable changes to Harbour Hustle are documented here.
 - Added J-Wood in West End Halifax as a paranoid, violent, unpredictable dealer who can offer an ultrasound.
 - Updated police flavor so they apologize frequently, including during threats and violence.
 - Updated NPC dialog flavor to include Halifax hoser phrasing, "eh", "my guy", Tims, Timbits, and adult language.
-- Changed Tims wording so "coffee" is not used for that flavor.
+- Changed hot drink wording so Harbour Hustle consistently uses Tims flavor.
 - Removed the CONFIG panel from the UI.
 - Removed the bottom command line from the UI.
 - Changed market max controls to one-click Max Buy and Max Sell actions.

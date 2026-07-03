@@ -16,6 +16,15 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   playerArmor: 100,
   helperArmor: 50,
   fightTimeoutSeconds: 5,
+  llmDialogue: {
+    enabled: true,
+    endpoint: "http://127.0.0.1:11434",
+    healthCheckTimeoutMs: 2_000,
+    maxTokens: 80,
+    model: "llama3.1:8b",
+    temperature: 0.85,
+    timeoutMs: 20_000,
+  },
   currency: {
     symbol: "$",
     prefix: true,

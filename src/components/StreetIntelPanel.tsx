@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TerminalButton } from "./TerminalButton";
 import { hoboIntelPrice } from "../game/engine";
 import { formatMoney, parseAmount } from "../game/format";
 import type { GameCommand, GameConfig, GameState, HoboConfig } from "../game/types";
+import { useNpcDialogue } from "../hooks/useNpcDialogue";
+import type { NpcConversationTarget } from "./ConversationOverlay";
 
 interface StreetIntelPanelProps {
   config: GameConfig;
-  state: GameState;
   dispatch: (command: GameCommand) => void;
+  llmAvailable: boolean;
+  onTalkToNpc: (target: NpcConversationTarget) => void;
+  state: GameState;
 }
 
 function relationshipLabel(value: number): "HOSTILE" | "COLD" | "NEUTRAL" | "WARM" | "TRUSTED" {
@@ -85,7 +89,7 @@ function contactLine(hobo: HoboConfig, relationship: number, price: number, canA
   return `${hobo.name} glances down the block. "Buy me a Tims and I'll tell ya what's moving."`;
 }
 
-export function StreetIntelPanel({ config, state, dispatch }: StreetIntelPanelProps) {
+export function StreetIntelPanel({ config, state, dispatch, llmAvailable, onTalkToNpc }: StreetIntelPanelProps) {
   const [selectedHoboId, setSelectedHoboId] = useState<string | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const currentHobos = config.hobos.filter((hobo) => hobo.locationId === state.player.locationId);
@@ -102,6 +106,41 @@ export function StreetIntelPanel({ config, state, dispatch }: StreetIntelPanelPr
     return parseAmount(amounts[drugId] ?? "1");
   }
 
+  const relationship = selectedHobo ? state.hoboRelationships?.[selectedHobo.id] ?? 0 : 0;
+  const price = selectedHobo ? hoboIntelPrice(config, state, selectedHobo) : 0;
+  const canAffordIntel = price <= state.player.cash;
+  const selectedHoboLine = selectedHobo ? contactLine(selectedHobo, relationship, price, canAffordIntel) : "";
+  const selectedHoboScene = useMemo(() => {
+    if (!selectedHobo) {
+      return "";
+    }
+
+    const location = config.locations.find((item) => item.id === selectedHobo.locationId)?.name ?? selectedHobo.locationId;
+    const favoriteDrugs = favoriteDrugNames(config, selectedHobo);
+    const priceText = price === 0 ? "free because trust is high" : formatMoney(config, price);
+
+    return [
+      "A potential buyer approaches you and says hello.",
+      `${selectedHobo.name} is a hobo and street intel contact in ${location}.`,
+      "They can sell or give intel, accept drug gifts, and may be threatened for information.",
+      `Relationship with player: ${relationship}.`,
+      `Intel price right now: ${priceText}. Player cash: ${formatMoney(config, state.player.cash)}.`,
+      `Can afford the intel: ${canAffordIntel ? "yes" : "no"}. Favorite gifts: ${favoriteDrugs}.`,
+      `Player reputation: ${state.player.reputation}; local turf influence: ${state.locationInfluence[selectedHobo.locationId] ?? 0}.`,
+      "Say the opening line for this conversation before the player chooses whether to buy intel, threaten, or gift drugs.",
+    ].join("\n");
+  }, [canAffordIntel, config, price, relationship, selectedHobo, state.locationInfluence, state.player.cash, state.player.reputation]);
+  const selectedHoboDialogue = useNpcDialogue({
+    config,
+    disabled: !selectedHobo,
+    fallback: selectedHoboLine,
+    llmAvailable,
+    npcId: selectedHobo?.id,
+    npcName: selectedHobo?.name,
+    refreshKey: `${state.player.turn}:${state.player.locationId}:${selectedHobo?.id ?? ""}:${relationship}:${price}:${state.player.cash}`,
+    scene: selectedHoboScene,
+  });
+
   if (!selectedHobo) {
     return (
       <section className="terminal-panel street-intel-panel" aria-label="Street intel">
@@ -111,12 +150,27 @@ export function StreetIntelPanel({ config, state, dispatch }: StreetIntelPanelPr
     );
   }
 
-  const relationship = state.hoboRelationships?.[selectedHobo.id] ?? 0;
-  const price = hoboIntelPrice(config, state, selectedHobo);
   const danger = hoboDanger(selectedHobo);
-  const canAffordIntel = price <= state.player.cash;
   const disabled = state.pendingPrompt !== null || state.gameOver;
   const localReports = state.intelReports.filter((report) => report.locationId === state.player.locationId).slice(0, 4);
+
+  function startHoboConversation(): void {
+    onTalkToNpc({
+      fallback: selectedHoboLine,
+      id: selectedHobo.id,
+      name: selectedHobo.name,
+      openingLine: selectedHoboDialogue.text,
+      role: "hobo and street intel contact",
+      scene: [
+        selectedHoboScene,
+        "The player clicked TALK in the Street Intel panel and can type directly to this street contact.",
+        "The contact can chat, hint, ask for payment, refuse, warn, or steer the player toward buying intel, gifting, or backing off.",
+        "This typed conversation is flavor and soft intel only; it cannot create a paid intel report, change relationship, accept gifts, trigger threats, or advance time.",
+      ].join("\n"),
+      title: `TALK TO ${selectedHobo.name.toUpperCase()}`,
+      tone: relationship < -40 ? "bad" : price === 0 ? "good" : "info",
+    });
+  }
 
   return (
     <section className="terminal-panel street-intel-panel" aria-label="Street intel">
@@ -170,8 +224,16 @@ export function StreetIntelPanel({ config, state, dispatch }: StreetIntelPanelPr
       </div>
 
       <div className="conversation-panel" aria-label={`${selectedHobo.name} conversation`}>
-        <p className="npc-line">{contactLine(selectedHobo, relationship, price, canAffordIntel)}</p>
+        <p className="npc-line">{selectedHoboDialogue.text}</p>
         <div className="dialogue-options" aria-label="Dialog options">
+          <TerminalButton
+            className="dialogue-option"
+            disabled={disabled}
+            onClick={startHoboConversation}
+          >
+            <span>TALK</span>
+            <small>Type your own question</small>
+          </TerminalButton>
           <TerminalButton
             className="dialogue-option"
             tone={price === 0 ? "good" : "default"}

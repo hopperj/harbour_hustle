@@ -120,6 +120,15 @@ export interface GameConfig {
   playerArmor: number;
   helperArmor: number;
   fightTimeoutSeconds: number;
+  llmDialogue: {
+    enabled: boolean;
+    endpoint: string;
+    healthCheckTimeoutMs: number;
+    maxTokens: number;
+    model: string;
+    temperature: number;
+    timeoutMs: number;
+  };
   currency: {
     symbol: string;
     prefix: boolean;

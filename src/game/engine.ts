@@ -307,12 +307,17 @@ function normalizeSavedLocationIds(config: GameConfig, state: GameState): void {
   }
 
   if (state.intelReports) {
-    state.intelReports = state.intelReports.map((report) => ({
-      ...report,
-      locationId: normalizeLocationId(config, report.locationId),
-      sourceName: migrateLegacyText(report.sourceName),
-      text: migrateLegacyText(report.text),
-    }));
+    state.intelReports = state.intelReports.map((report) => {
+      const sourceName = migrateLegacyText(report.sourceName);
+      const hobo = config.hobos.find((item) => item.id === report.sourceId) ?? { name: sourceName };
+
+      return {
+        ...report,
+        locationId: normalizeLocationId(config, report.locationId),
+        sourceName,
+        text: formatIntelSummary(hobo, migrateLegacyText(report.text)),
+      };
+    });
   }
 
   if (state.priceHistory) {
@@ -666,6 +671,29 @@ function pickFlavorLine(state: GameState, key: string, variants: string[]): stri
   return variants[textRoll(state, key, 71) % variants.length];
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function formatIntelSummary(hobo: Pick<HoboConfig, "name">, text: string): string {
+  if (text.startsWith("Intel from ")) {
+    return text;
+  }
+
+  const speaker = escapeRegExp(hobo.name);
+  const spokenPrefix = new RegExp(
+    `^${speaker}\\s+(?:says|heard|swears|figures|claims|calls|bows(?:\\s+low)?|sings)\\s*:?\\s*`,
+    "i",
+  );
+  const summary = text
+    .replace(spokenPrefix, "")
+    .replace(/^["'“”]+|["'“”]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return `Intel from ${hobo.name}: ${summary || text}`;
+}
+
 function hoserMarketIntelText(
   config: GameConfig,
   state: GameState,
@@ -1014,7 +1042,7 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
     sourceName: hobo.name,
     locationId: hobo.locationId,
     topic,
-    text: hobo.dialogStyle === "rhyme" ? text : withEh(state, withSwearing(state, text, 38), 72),
+    text: formatIntelSummary(hobo, hobo.dialogStyle === "rhyme" ? text : withEh(state, withSwearing(state, text, 38), 72)),
     accurate,
   };
 }

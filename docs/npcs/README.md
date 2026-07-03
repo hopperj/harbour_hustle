@@ -1,6 +1,10 @@
 # NPC Context Index
 
-These files are structured context documents for future LLM-generated NPC dialog. Each NPC file uses the same headings so runtime retrieval can feed a consistent context shape to the model.
+These files are structured context documents for LLM-generated NPC dialog. The web app bundles these markdown files and feeds the matching NPC file into Ollama whenever it asks `llama3.1:8b` for a spoken line.
+
+Each NPC file uses the same headings so runtime retrieval can feed a consistent context shape to the model. The `Role In The Game` section is especially important because it tells the model whether the character is selling drugs, acting as a hobo/street intel contact, or confronting the player as police.
+
+Each file should also keep a `Hoser Saying Reference` and `Example Dialog` section. These give the runtime prompt concrete slang, rhythm, and sample lines for that NPC without hardcoding the exact generated output.
 
 ## Dealers
 

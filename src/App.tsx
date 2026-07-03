@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ConversationOverlay, type NpcConversationTarget } from "./components/ConversationOverlay";
 import { EventLog } from "./components/EventLog";
 import { FinancePanel } from "./components/FinancePanel";
 import { InventoryPanel } from "./components/InventoryPanel";
@@ -11,9 +12,11 @@ import { StreetIntelPanel } from "./components/StreetIntelPanel";
 import { TerminalButton } from "./components/TerminalButton";
 import { TravelPanel } from "./components/TravelPanel";
 import { DEFAULT_GAME_CONFIG } from "./game/config";
-import { applyCommand, createGame, hydrateGameState } from "./game/engine";
+import { applyCommand, createGame, hoboIntelPrice, hydrateGameState } from "./game/engine";
 import { formatMoney } from "./game/format";
-import type { EventLogEntry, GameCommand, GameState, Tone } from "./game/types";
+import type { EventLogEntry, GameCommand, GameConfig, GameState, Tone } from "./game/types";
+import { useNpcDialogue } from "./hooks/useNpcDialogue";
+import { useOllamaAvailability } from "./hooks/useOllamaAvailability";
 
 const SAVE_KEY = "harbour-hustle-state-v1";
 const PRE_RENAME_SAVE_PREFIX = ["dope", "wars-web-state-v"].join("");
@@ -26,8 +29,14 @@ const LEGACY_SAVE_KEYS = [
 ];
 
 interface ActionOutcome {
+  dialogueFallback: string;
+  dialogueScene: string;
   entries: EventLogEntry[];
+  hoboId?: string;
   id: string;
+  npcId?: string;
+  npcName?: string;
+  npcRole?: string;
   prompt: GameState["pendingPrompt"];
   title: string;
   tone: Tone;
@@ -105,7 +114,73 @@ function outcomeTone(entries: EventLogEntry[], prompt: GameState["pendingPrompt"
   return "info";
 }
 
-function buildOutcome(command: GameCommand, previous: GameState, next: GameState): ActionOutcome | null {
+function outcomeNpc(
+  config: GameConfig,
+  command: GameCommand,
+  previous: GameState,
+): { id: string; name: string; role: string } | null {
+  if (command.type === "buyHoboIntel" || command.type === "threatenHobo") {
+    const hobo = config.hobos.find((item) => item.id === command.hoboId);
+    return hobo ? { id: hobo.id, name: hobo.name, role: "street intel contact and hobo" } : null;
+  }
+
+  if (command.type === "robDealer") {
+    const dealer = config.dealers.find((item) => item.id === command.dealerId);
+    return dealer ? { id: dealer.id, name: dealer.name, role: "drug dealer" } : null;
+  }
+
+  if (command.type === "answerPrompt" && previous.pendingPrompt?.type === "cops") {
+    const copId = previous.pendingPrompt.copId;
+    const cop = config.cops.find((item) => item.id === copId);
+    return cop ? { id: cop.id, name: cop.name, role: "police officer" } : null;
+  }
+
+  if (command.type === "answerPrompt" && previous.pendingPrompt?.type === "dealer-offer") {
+    const dealerId = previous.pendingPrompt.dealerId;
+    const dealer = config.dealers.find((item) => item.id === dealerId);
+    return dealer ? { id: dealer.id, name: dealer.name, role: "drug dealer" } : null;
+  }
+
+  return null;
+}
+
+function outcomeScene(
+  command: GameCommand,
+  npc: { id: string; name: string; role: string } | null,
+  entries: EventLogEntry[],
+  previous: GameState,
+  next: GameState,
+): string {
+  if (!npc) {
+    return "";
+  }
+
+  const summary = entries.map((entry) => `- ${entry.text}`).join("\n") || "- No new event log lines.";
+  const opener = "A potential buyer approaches you and says hello.";
+  const common = [
+    opener,
+    `${npc.name} is a ${npc.role}.`,
+    `Player location id: ${next.player.locationId}. Player cash: ${next.player.cash}. Player reputation: ${next.player.reputation}.`,
+    "Recent mechanical outcome:",
+    summary,
+  ];
+
+  if (command.type === "buyHoboIntel") {
+    common.push("The player just bought or received intel from you. Say what you say while handing over the information.");
+  } else if (command.type === "threatenHobo") {
+    common.push("The player just threatened you for intel. React to the threat and outcome.");
+  } else if (command.type === "robDealer") {
+    common.push("The player just tried to rob you. React to the robbery outcome.");
+  } else if (command.type === "answerPrompt" && previous.pendingPrompt?.type === "cops") {
+    common.push(`The player chose ${command.answer.toUpperCase()} during a police encounter. React to that result.`);
+  } else if (command.type === "answerPrompt" && previous.pendingPrompt?.type === "dealer-offer") {
+    common.push(`The player answered ${command.answer.toUpperCase()} to your side offer. React to that answer.`);
+  }
+
+  return common.join("\n");
+}
+
+function buildOutcome(config: GameConfig, command: GameCommand, previous: GameState, next: GameState): ActionOutcome | null {
   if (!shouldShowOutcome(command)) {
     return null;
   }
@@ -116,9 +191,17 @@ function buildOutcome(command: GameCommand, previous: GameState, next: GameState
     return null;
   }
 
+  const npc = outcomeNpc(config, command, previous);
+
   return {
+    dialogueFallback: npc ? `${npc.name} watches how you react.` : "",
+    dialogueScene: outcomeScene(command, npc, entries, previous, next),
     entries,
+    hoboId: "hoboId" in command ? command.hoboId : undefined,
     id: `${next.logIndex}:${command.type}:${"answer" in command ? command.answer : ""}`,
+    npcId: npc?.id,
+    npcName: npc?.name,
+    npcRole: npc?.role,
     prompt,
     title: outcomeTitle(command),
     tone: outcomeTone(entries, prompt),
@@ -127,8 +210,11 @@ function buildOutcome(command: GameCommand, previous: GameState, next: GameState
 
 export default function App() {
   const config = DEFAULT_GAME_CONFIG;
+  const ollamaStatus = useOllamaAvailability(config);
+  const llmAvailable = ollamaStatus === "available";
   const [state, setState] = useState<GameState>(() => loadState());
   const [outcome, setOutcome] = useState<ActionOutcome | null>(null);
+  const [conversation, setConversation] = useState<NpcConversationTarget | null>(null);
   const stateRef = useRef(state);
 
   useEffect(() => {
@@ -146,7 +232,7 @@ export default function App() {
       const next = applyCommand(config, current, command);
       stateRef.current = next;
       setState(next);
-      const nextOutcome = buildOutcome(command, current, next);
+      const nextOutcome = buildOutcome(config, command, current, next);
       if (nextOutcome) {
         setOutcome(nextOutcome);
       }
@@ -159,9 +245,59 @@ export default function App() {
     stateRef.current = next;
     setState(next);
     setOutcome(null);
+    setConversation(null);
   }, [config]);
 
+  const openConversation = useCallback((target: NpcConversationTarget) => {
+    setConversation(target);
+  }, []);
+
   const canFight = Object.values(state.player.guns).some((item) => item.carried > 0);
+  const outcomeHobo = outcome?.hoboId ? config.hobos.find((hobo) => hobo.id === outcome.hoboId) : null;
+  const outcomeHoboIsHere = outcomeHobo?.locationId === state.player.locationId;
+  const outcomeHoboIntelPrice = outcomeHobo ? hoboIntelPrice(config, state, outcomeHobo) : 0;
+  const outcomeLocked = state.pendingPrompt !== null || state.gameOver || !outcomeHoboIsHere;
+  const hoboActions = outcomeHobo ? [
+    {
+      detail: outcomeHoboIntelPrice === 0
+        ? "Ask for another local tip"
+        : `${formatMoney(config, outcomeHoboIntelPrice)} for another local tip`,
+      disabled: outcomeLocked || outcomeHoboIntelPrice > state.player.cash,
+      label: "GET MORE INTEL",
+      onClick: () => dispatch({ type: "buyHoboIntel", hoboId: outcomeHobo.id }),
+      tone: outcomeHoboIntelPrice === 0 ? "good" as const : "default" as const,
+    },
+    {
+      detail: "Force another story out of them",
+      disabled: outcomeLocked,
+      label: "THREATEN",
+      onClick: () => dispatch({ type: "threatenHobo", hoboId: outcomeHobo.id }),
+      tone: "bad" as const,
+    },
+  ] : [];
+  const outcomeDialogue = useNpcDialogue({
+    config,
+    disabled: !outcome?.npcId,
+    fallback: outcome?.dialogueFallback ?? "",
+    llmAvailable,
+    npcId: outcome?.npcId,
+    npcName: outcome?.npcName,
+    refreshKey: outcome?.id ?? null,
+    scene: outcome?.dialogueScene ?? "",
+  });
+  const outcomeConversation = outcome?.npcId && outcome.npcName ? {
+    fallback: outcome.dialogueFallback,
+    id: outcome.npcId,
+    name: outcome.npcName,
+    openingLine: outcomeDialogue.text,
+    role: outcome.npcRole ?? "encounter NPC",
+    scene: [
+      outcome.dialogueScene,
+      "The player opened a typed follow-up conversation from the action report window.",
+    ].join("\n"),
+    title: `TALK TO ${outcome.npcName.toUpperCase()}`,
+    tone: outcome.tone,
+  } satisfies NpcConversationTarget : null;
 
   return (
     <main className="terminal-shell">
@@ -174,7 +310,7 @@ export default function App() {
         </aside>
 
         <section className="center-column">
-          <PromptPanel config={config} state={state} dispatch={dispatch} />
+          <PromptPanel config={config} state={state} dispatch={dispatch} llmAvailable={llmAvailable} />
           {state.gameOver && (
             <section className="terminal-panel game-over-panel" aria-label="Game over">
               <h2>GAME OVER</h2>
@@ -184,8 +320,8 @@ export default function App() {
               </TerminalButton>
             </section>
           )}
-          <MarketPanel config={config} state={state} dispatch={dispatch} />
-          <StreetIntelPanel config={config} state={state} dispatch={dispatch} />
+          <MarketPanel config={config} state={state} dispatch={dispatch} llmAvailable={llmAvailable} onTalkToNpc={openConversation} />
+          <StreetIntelPanel config={config} state={state} dispatch={dispatch} llmAvailable={llmAvailable} onTalkToNpc={openConversation} />
           <EventLog state={state} />
           <ServicePanel config={config} state={state} dispatch={dispatch} />
         </section>
@@ -197,14 +333,27 @@ export default function App() {
 
       {outcome && (
         <OutcomeOverlay
+          actions={hoboActions}
           canFight={canFight}
           entries={outcome.entries}
           id={outcome.id}
+          npcDialogue={outcomeDialogue.text}
+          npcName={outcome.npcName}
           onAnswer={(answer) => dispatch({ type: "answerPrompt", answer })}
           onClose={() => setOutcome(null)}
+          onTalk={outcomeConversation ? () => openConversation(outcomeConversation) : undefined}
           prompt={outcome.prompt}
           title={outcome.title}
           tone={outcome.tone}
+        />
+      )}
+
+      {conversation && (
+        <ConversationOverlay
+          config={config}
+          ollamaStatus={ollamaStatus}
+          onClose={() => setConversation(null)}
+          target={conversation}
         />
       )}
 
