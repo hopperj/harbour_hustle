@@ -11,7 +11,7 @@ Harbour Hustle uses an HRM-only travel map. Location ids are stable config keys;
 | West End Halifax | `west-end-halifax` | 12 | 6-10 | Low-police balanced market with J-Wood and Chebucto Cam. |
 | Dartmouth | `dartmouth` | 45 | 6-12 | Mid-risk cross-harbour market with proud local dealers. |
 | Bedford | `bedford` | 30 | 5-10 | Lower-heat connected market. |
-| Sackville | `sackville` | 22 | 7-12 | Lower-police, higher-stock service stop with the gun shop. |
+| Sackville | `sackville` | 22 | 7-12 | Lower-police, higher-stock service stop with the weapon shop. |
 | Spryfield | `spryfield` | 28 | 7-12 | Lower-police, higher-stock market with pub access. |
 | Halifax Public Gardens | `halifax-public-gardens` | 50 | 5-11 | Mid-police psychedelic market. |
 | Eastern Passage | `eastern-passage` | 18 | 6-12 | Low-police waterfront market. |
@@ -22,14 +22,14 @@ Harbour Hustle uses an HRM-only travel map. Location ids are stable config keys;
 |---|---|
 | Bank | Downtown Halifax |
 | Loan shark | Downtown Halifax |
-| Dan's House of Guns | Sackville |
+| Sackville Salvage & Sporting Goods | Sackville |
 | Pub | Spryfield |
 
 ## NPC Placement
 
 | Location | Dealers | Street intel contacts |
 |---|---|---|
-| Downtown Halifax | Big Paulie | Barrington Sue |
+| Downtown Halifax | Shady Rich | Barrington Sue |
 | North End Halifax | Mama Dee, Needle Nick | Tin Can Marty |
 | West End Halifax | J-Wood | Chebucto Cam |
 | Dartmouth | Boardwalk Sal | Boardwalk Benny |

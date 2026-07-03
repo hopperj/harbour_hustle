@@ -49,6 +49,26 @@ function hoboDanger(hobo: HoboConfig): "LOW" | "MED" | "HIGH" {
   return "LOW";
 }
 
+function favoriteDrugNames(config: GameConfig, hobo: HoboConfig): string {
+  return hobo.favoriteDrugIds.map((drugId) => config.drugs.find((drug) => drug.id === drugId)?.name ?? drugId).join("/");
+}
+
+function contactLine(hobo: HoboConfig, relationship: number, price: number, canAffordIntel: boolean): string {
+  if (relationship < -40) {
+    return `${hobo.name} keeps a hard eye on you. "Talk quick, eh. I'm not in the mood for bullshit."`;
+  }
+
+  if (price > 0 && !canAffordIntel) {
+    return `${hobo.name} taps an empty cup. "No Tims money, no story, my guy."`;
+  }
+
+  if (price === 0) {
+    return `${hobo.name} leans in. "You've been decent. Ask straight and I'll tell ya what I heard."`;
+  }
+
+  return `${hobo.name} glances down the block. "Buy me a Tims and I'll tell ya what's moving."`;
+}
+
 export function StreetIntelPanel({ config, state, dispatch }: StreetIntelPanelProps) {
   const [selectedHoboId, setSelectedHoboId] = useState<string | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
@@ -78,14 +98,13 @@ export function StreetIntelPanel({ config, state, dispatch }: StreetIntelPanelPr
   const relationship = state.hoboRelationships?.[selectedHobo.id] ?? 0;
   const price = hoboIntelPrice(config, state, selectedHobo);
   const danger = hoboDanger(selectedHobo);
+  const canAffordIntel = price <= state.player.cash;
+  const disabled = state.pendingPrompt !== null || state.gameOver;
   const localReports = state.intelReports.filter((report) => report.locationId === state.player.locationId).slice(0, 4);
 
   return (
     <section className="terminal-panel street-intel-panel" aria-label="Street intel">
-      <div className="section-heading">
-        <h2>STREET INTEL</h2>
-        <span>{state.lastCommand}</span>
-      </div>
+      <h2>STREET INTEL</h2>
 
       <div className="hobo-selector" aria-label="Hobos">
         {currentHobos.map((hobo) => {
@@ -127,74 +146,73 @@ export function StreetIntelPanel({ config, state, dispatch }: StreetIntelPanelPr
             </div>
             <div>
               <dt>Likes</dt>
-              <dd>{selectedHobo.favoriteDrugIds.map((drugId) => config.drugs.find((drug) => drug.id === drugId)?.name ?? drugId).join("/")}</dd>
+              <dd>{favoriteDrugNames(config, selectedHobo)}</dd>
             </div>
           </dl>
         </div>
-        <div className="hobo-actions">
+      </div>
+
+      <div className="conversation-panel" aria-label={`${selectedHobo.name} conversation`}>
+        <p className="npc-line">{contactLine(selectedHobo, relationship, price, canAffordIntel)}</p>
+        <div className="dialogue-options" aria-label="Dialog options">
           <TerminalButton
+            className="dialogue-option"
             tone={price === 0 ? "good" : "default"}
-            disabled={state.pendingPrompt !== null || state.gameOver || price > state.player.cash}
+            disabled={disabled || !canAffordIntel}
             onClick={() => dispatch({ type: "buyHoboIntel", hoboId: selectedHobo.id })}
           >
-            INFO
+            <span>{price === 0 ? "Ask what they know" : "Buy a Tims and ask around"}</span>
+            <small>{price === 0 ? "Free local intel" : `${formatMoney(config, price)} for local intel`}</small>
           </TerminalButton>
           <TerminalButton
+            className="dialogue-option threaten-option"
             tone="bad"
-            disabled={state.pendingPrompt !== null || state.gameOver}
+            disabled={disabled}
             onClick={() => dispatch({ type: "threatenHobo", hoboId: selectedHobo.id })}
           >
-            THREATEN
+            <span>THREATEN</span>
+            <small>Force a story out of them</small>
           </TerminalButton>
         </div>
       </div>
 
       {carriedDrugs.length > 0 ? (
-        <div className="hobo-gifts">
-          <h3>GIFTS</h3>
-          <table className="terminal-table compact-table">
-            <thead>
-              <tr>
-                <th>Drug</th>
-                <th>Held</th>
-                <th>Qty</th>
-                <th>Command</th>
-              </tr>
-            </thead>
-            <tbody>
-              {carriedDrugs.map((drug) => {
-                const inventory = state.player.drugs[drug.id];
-                const amount = amountFor(drug.id);
-                return (
-                  <tr key={drug.id}>
-                    <td>{drug.name}</td>
-                    <td>{inventory.carried}</td>
-                    <td>
-                      <input
-                        aria-label={`${drug.name} hobo gift quantity`}
-                        inputMode="numeric"
-                        min={0}
-                        value={amounts[drug.id] ?? "1"}
-                        onChange={(event) => setAmounts((current) => ({ ...current, [drug.id]: event.target.value }))}
-                      />
-                    </td>
-                    <td className="command-cell">
-                      <TerminalButton
-                        tone="good"
-                        disabled={amount <= 0 || amount > inventory.carried || state.pendingPrompt !== null}
-                        onClick={() => dispatch({ type: "giftHoboDrug", hoboId: selectedHobo.id, drugId: drug.id, amount })}
-                      >
-                        GIFT
-                      </TerminalButton>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="dialogue-gifts">
+          <h3>OFFER A GIFT</h3>
+          <div className="gift-options" aria-label="Gift dialog options">
+            {carriedDrugs.map((drug) => {
+              const inventory = state.player.drugs[drug.id];
+              const amount = amountFor(drug.id);
+              const favorite = selectedHobo.favoriteDrugIds.includes(drug.id);
+              return (
+                <div className="gift-option" key={drug.id}>
+                  <label>
+                    <span>{drug.name}</span>
+                    <small>Held {inventory.carried}{favorite ? " / favorite" : ""}</small>
+                    <input
+                      aria-label={`${drug.name} gift amount`}
+                      inputMode="numeric"
+                      min={0}
+                      value={amounts[drug.id] ?? "1"}
+                      onChange={(event) => setAmounts((current) => ({ ...current, [drug.id]: event.target.value }))}
+                    />
+                  </label>
+                  <TerminalButton
+                    className="dialogue-option gift-choice"
+                    tone="good"
+                    disabled={amount <= 0 || amount > inventory.carried || disabled}
+                    onClick={() => dispatch({ type: "giftHoboDrug", hoboId: selectedHobo.id, drugId: drug.id, amount })}
+                  >
+                    <span>Offer {drug.name}</span>
+                    <small>{amount > 0 ? `${amount} for relationship` : "Choose an amount"}</small>
+                  </TerminalButton>
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : (
-        <p className="is-empty">Carry drugs if you want to gift this contact.</p>
+        <p className="is-empty">You have nothing worth offering right now.</p>
       )}
 
       <div className="intel-feed">

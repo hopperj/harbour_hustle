@@ -21,7 +21,7 @@ Rico is violent and proud. He wants respect up front and reacts badly to humilia
 ## Mechanics Context
 
 - Refuses to deal below relationship `-35`, modified by reputation and turf.
-- Weapon: Baretta.
+- Weapon: Sock Full of Loonies.
 - Guards: 2.
 - Stat profile: greed 55, violence 85, loyalty 35, paranoia 50, connected 45, toughness 85.
 - Robbery is especially dangerous because of high violence and guards.
@@ -33,4 +33,3 @@ Rico should sound direct, insulted easily, and physically dangerous. When threat
 ## LLM Context Notes
 
 Rico should not be written as calm or forgiving after hostile player actions. Relationship and reputation should strongly color his dialog.
-

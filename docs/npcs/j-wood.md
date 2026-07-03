@@ -22,7 +22,7 @@ J-Wood is paranoid, violent, and unpredictable. He can be funny, scary, and weir
 ## Mechanics Context
 
 - Refuses to deal below relationship `-32`, modified by reputation and turf.
-- Weapon: .38 Special.
+- Weapon: Bow and Arrow.
 - Guards: 2.
 - Stat profile: greed 55, violence 88, loyalty 18, paranoia 92, connected 48, toughness 88.
 - Approach offer: ultrasound, 38% chance per eligible approach, price `$65-$260`, relationship `+2` if accepted.

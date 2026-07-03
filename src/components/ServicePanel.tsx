@@ -24,10 +24,10 @@ export function ServicePanel({ config, state, dispatch }: ServicePanelProps) {
       {atGunShop ? (
         <div>
           <h3>{config.names.gunShop.toUpperCase()}</h3>
-          <table className="terminal-table compact-table">
+          <table className="terminal-table compact-table service-table">
             <thead>
               <tr>
-                <th>Gun</th>
+                <th>{config.names.gunSingular}</th>
                 <th>Price</th>
                 <th>Space</th>
                 <th>Held</th>
@@ -43,7 +43,7 @@ export function ServicePanel({ config, state, dispatch }: ServicePanelProps) {
                     <td>{gun.name}</td>
                     <td>{formatMoney(config, gun.price)}</td>
                     <td>{gun.space}</td>
-                    <td>{state.player.guns[gun.id].carried}</td>
+                    <td>{state.player.guns[gun.id]?.carried ?? 0}</td>
                     <td>
                       <input
                         aria-label={`${gun.name} quantity`}

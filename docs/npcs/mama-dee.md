@@ -21,7 +21,7 @@ Mama Dee is loyal, connected, and relatively steady. She is not soft, but she pr
 ## Mechanics Context
 
 - Refuses to deal below relationship `-40`, modified by reputation and turf.
-- Weapon: Saturday Night Special.
+- Weapon: Zamboni-Part Mace.
 - Guards: 1.
 - Stat profile: greed 30, violence 35, loyalty 85, paranoia 35, connected 65, toughness 55.
 - Relationship improves through trades and gifts.

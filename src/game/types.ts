@@ -2,7 +2,7 @@ export type Tone = "info" | "good" | "warn" | "bad";
 
 export type DealType = "normal" | "cheap" | "expensive" | "none";
 
-export type DealerTrait = "loyal" | "greedy" | "violent" | "paranoid" | "connected" | "proud" | "unpredictable";
+export type DealerTrait = "loyal" | "greedy" | "violent" | "paranoid" | "connected" | "proud" | "unpredictable" | "conspiracy";
 
 export type IntelTopic = "market" | "dealer" | "police" | "turf" | "opportunity";
 

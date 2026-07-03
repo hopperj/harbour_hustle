@@ -21,7 +21,7 @@ Professor X is connected and loyal, with a quieter and more analytical style. He
 ## Mechanics Context
 
 - Refuses to deal below relationship `-50`, modified by reputation and turf.
-- Weapon: Ruger.
+- Weapon: Sharpened Hockey Stick.
 - Guards: 0.
 - Stat profile: greed 25, violence 25, loyalty 70, paranoia 45, connected 85, toughness 45.
 - Lower robbery danger than most dealers, but robbery still ruins the relationship.

@@ -24,8 +24,8 @@ Agent Smith is the heaviest current police threat. He is more formal, colder, an
 - Armor: 50. Deputy armor: 6.
 - Attack penalty: 20. Defend penalty: 20.
 - Deputies: 6-18.
-- Weapon: .38 Special.
-- Cop guns: 3. Deputy guns: 2.
+- Weapon: Bow and Arrow.
+- Cop weapons: 3. Deputy weapons: 2.
 - Player can run or fight if armed.
 
 ## Dialog Guidance
@@ -35,4 +35,3 @@ Use a controlled, bureaucratic, threatening voice. He should still say "sorry" o
 ## LLM Context Notes
 
 Agent Smith should be reserved for serious police encounters. He should not be casual, friendly, or available for market/intel interactions.
-

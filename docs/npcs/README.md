@@ -8,7 +8,7 @@ These files are structured context documents for future LLM-generated NPC dialog
 - [Needle Nick](needle-nick.md)
 - [Rico](rico.md)
 - [Professor X](professor-x.md)
-- [Big Paulie](big-paulie.md)
+- [Shady Rich](shady-rich.md)
 - [Boardwalk Sal](boardwalk-sal.md)
 - [Bedford Rose](brooklyn-rose.md)
 - [Sackville Vic](queens-vic.md)
@@ -32,4 +32,3 @@ These files are structured context documents for future LLM-generated NPC dialog
 - [Officer Hardass](officer-hardass.md)
 - [Officer Bob](officer-bob.md)
 - [Agent Smith](agent-smith.md)
-

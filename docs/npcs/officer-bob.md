@@ -24,8 +24,8 @@ Officer Bob is a stronger police escalation. He sounds more organized than Offic
 - Armor: 15. Deputy armor: 4.
 - Attack penalty: 30. Defend penalty: 20.
 - Deputies: 4-10.
-- Weapon: Baretta.
-- Cop guns: 2. Deputy guns: 1.
+- Weapon: Sock Full of Loonies.
+- Cop weapons: 2. Deputy weapons: 1.
 - Player can run or fight if armed.
 
 ## Dialog Guidance
@@ -35,4 +35,3 @@ Use a polite but escalating police voice. He should apologize before and during 
 ## LLM Context Notes
 
 Officer Bob should feel like a mid-tier encounter. He should not reveal future police encounters or hidden RNG outcomes.
-

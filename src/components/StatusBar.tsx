@@ -1,13 +1,15 @@
 import { formatMoney } from "../game/format";
 import { netWorth, totalCapacity } from "../game/engine";
 import type { GameConfig, GameState } from "../game/types";
+import { TerminalButton } from "./TerminalButton";
 
 interface StatusBarProps {
   config: GameConfig;
   state: GameState;
+  onNewGame: () => void;
 }
 
-export function StatusBar({ config, state }: StatusBarProps) {
+export function StatusBar({ config, state, onNewGame }: StatusBarProps) {
   const { player } = state;
   const location = config.locations.find((item) => item.id === player.locationId) ?? config.locations[0];
 
@@ -25,6 +27,11 @@ export function StatusBar({ config, state }: StatusBarProps) {
       <div className={player.reputation < 0 ? "money-bad" : player.reputation > 0 ? "money-good" : ""}>REP {player.reputation}</div>
       <div className={netWorth(player) >= 0 ? "money-good" : "money-bad"}>
         NET {formatMoney(config, netWorth(player))}
+      </div>
+      <div className="status-action">
+        <TerminalButton className="status-new-game" tone="warn" onClick={onNewGame}>
+          NEW GAME
+        </TerminalButton>
       </div>
     </header>
   );

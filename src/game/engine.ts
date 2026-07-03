@@ -84,7 +84,7 @@ function getDrug(config: GameConfig, id: string): DrugConfig {
 function getGun(config: GameConfig, id: string): GunConfig {
   const gun = config.guns.find((item) => item.id === id);
   if (!gun) {
-    throw new Error(`Unknown gun: ${id}`);
+    throw new Error(`Unknown weapon: ${id}`);
   }
   return gun;
 }
@@ -357,6 +357,10 @@ function ensureStreetState(config: GameConfig, state: GameState): void {
 
   state.intelReports ??= [];
   state.player.reputation ??= 0;
+  state.player.guns ??= {};
+  for (const gun of config.guns) {
+    state.player.guns[gun.id] ??= { carried: 0 };
+  }
 }
 
 function ensureDealerState(config: GameConfig, state: GameState): void {
@@ -1117,7 +1121,7 @@ function loseHelper(config: GameConfig, state: GameState): void {
       continue;
     }
 
-    const gun = config.guns.find((item) => state.player.guns[item.id].carried > 0);
+    const gun = config.guns.find((item) => (state.player.guns[item.id]?.carried ?? 0) > 0);
     if (!gun) {
       state.player.space = Math.max(0, state.player.space);
       break;
@@ -1450,7 +1454,7 @@ function fightCops(config: GameConfig, state: GameState): void {
   }
 
   if (totalGuns(state.player) <= 0) {
-    pushLog(state, "bad", withViolentSorry(state, "The cops tell you running is your only move because you have no guns."));
+    pushLog(state, "bad", withViolentSorry(state, `The cops tell you running is your only move because you have no ${config.names.gunPlural}.`));
     runFromCops(config, state);
     return;
   }
@@ -1487,7 +1491,7 @@ function fightCops(config: GameConfig, state: GameState): void {
   }
 
   state.pendingPrompt = null;
-  pushLog(state, "bad", withViolentSorry(state, `${cop.name} fires back.`));
+  pushLog(state, "bad", withViolentSorry(state, `${cop.name} fights back.`));
   damagePlayer(config, state, Math.max(1, damage));
   maybeDoctor(config, state);
 }
@@ -2097,7 +2101,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
 
     case "buyGun": {
       if (state.player.locationId !== config.serviceLocations.gunShop) {
-        pushLog(state, "bad", "There is no gun shop here.");
+        pushLog(state, "bad", "There is no weapon shop here.");
         return state;
       }
       const gun = getGun(config, command.gunId);
@@ -2115,7 +2119,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
 
     case "sellGun": {
       if (state.player.locationId !== config.serviceLocations.gunShop) {
-        pushLog(state, "bad", "There is no gun shop here.");
+        pushLog(state, "bad", "There is no weapon shop here.");
         return state;
       }
       const gun = getGun(config, command.gunId);

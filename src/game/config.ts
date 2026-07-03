@@ -1,7 +1,7 @@
 import type { GameConfig } from "./types";
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
-  version: "faithful-0.4-hrm-locations",
+  version: "faithful-0.5-hrm-weapons",
   startDate: "1984-12-01",
   numTurns: 31,
   startCash: 2000,
@@ -23,13 +23,13 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   names: {
     helperSingular: "bitch",
     helperPlural: "bitches",
-    gunSingular: "gun",
-    gunPlural: "guns",
+    gunSingular: "weapon",
+    gunPlural: "weapons",
     drugSingular: "drug",
     drugPlural: "drugs",
     loanShark: "the Loan Shark",
     bank: "the Bank",
-    gunShop: "Dan's House of Guns",
+    gunShop: "Sackville Salvage & Sporting Goods",
     roughPub: "the pub",
   },
   prices: {
@@ -172,10 +172,13 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     },
   ],
   guns: [
-    { id: "baretta", name: "Baretta", price: 3000, space: 4, damage: 5 },
-    { id: "38-special", name: ".38 Special", price: 3500, space: 4, damage: 9 },
-    { id: "ruger", name: "Ruger", price: 2900, space: 4, damage: 4 },
-    { id: "saturday-night-special", name: "Saturday Night Special", price: 3100, space: 4, damage: 7 },
+    { id: "glass-coke-bottle", name: "Glass Coke-a-Cola Bottle", price: 900, space: 1, damage: 2 },
+    { id: "tire-iron", name: "Tire Iron", price: 1400, space: 2, damage: 4 },
+    { id: "fillet-knife", name: "Rusty Fillet Knife", price: 1800, space: 1, damage: 3 },
+    { id: "ruger", name: "Sharpened Hockey Stick", price: 2200, space: 3, damage: 4 },
+    { id: "baretta", name: "Sock Full of Loonies", price: 2500, space: 2, damage: 5 },
+    { id: "saturday-night-special", name: "Zamboni-Part Mace", price: 3300, space: 5, damage: 7 },
+    { id: "38-special", name: "Bow and Arrow", price: 3600, space: 4, damage: 9 },
   ],
   cops: [
     {
@@ -291,19 +294,19 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     },
     {
       id: "big-paulie",
-      name: "Big Paulie",
+      name: "Shady Rich",
       locationId: "downtown-halifax",
       drugIds: ["cocaine", "heroin", "opium", "mda", "pcp"],
-      traits: ["greedy", "violent", "connected"],
-      greed: 90,
-      violence: 90,
+      traits: ["greedy", "paranoid", "conspiracy"],
+      greed: 82,
+      violence: 68,
       loyalty: 20,
-      paranoia: 65,
-      connected: 80,
-      toughness: 105,
+      paranoia: 96,
+      connected: 72,
+      toughness: 88,
       refuseBelow: -30,
-      weaponGunId: "38-special",
-      guardCount: 3,
+      weaponGunId: "tire-iron",
+      guardCount: 2,
     },
     {
       id: "boardwalk-sal",

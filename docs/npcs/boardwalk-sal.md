@@ -21,7 +21,7 @@ Boardwalk Sal is loyal and proud. He cares about reputation and face. He is not 
 ## Mechanics Context
 
 - Refuses to deal below relationship `-40`, modified by reputation and turf.
-- Weapon: Saturday Night Special.
+- Weapon: Zamboni-Part Mace.
 - Guards: 1.
 - Stat profile: greed 45, violence 50, loyalty 75, paranoia 35, connected 35, toughness 60.
 

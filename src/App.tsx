@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { EventLog } from "./components/EventLog";
 import { FinancePanel } from "./components/FinancePanel";
 import { InventoryPanel } from "./components/InventoryPanel";
@@ -75,15 +75,9 @@ export default function App() {
     setState(createGame(config));
   }, [config]);
 
-  const configSummary = useMemo(
-    () =>
-      `${config.locations.length} LOC / ${config.dealers.length} DEALER / ${config.hobos.length} INTEL / ${config.drugs.length} DRUG / ${config.guns.length} GUN / JSON CONFIG`,
-    [config],
-  );
-
   return (
     <main className="terminal-shell">
-      <StatusBar config={config} state={state} />
+      <StatusBar config={config} state={state} onNewGame={newGame} />
 
       <div className="app-grid">
         <aside className="left-column">
@@ -110,21 +104,9 @@ export default function App() {
 
         <aside className="right-column">
           <TravelPanel config={config} state={state} dispatch={dispatch} />
-          <section className="terminal-panel config-panel" aria-label="Configuration">
-            <h2>CONFIG</h2>
-            <p>{configSummary}</p>
-            <p>Seed: {state.rngState}</p>
-            <TerminalButton tone="warn" onClick={newGame}>
-              RESET
-            </TerminalButton>
-          </section>
         </aside>
       </div>
 
-      <footer className="command-line" aria-label="Command line">
-        <span>COMMAND:</span>
-        <span className="cursor">{state.pendingPrompt ? "ANSWER" : state.gameOver ? "NEW GAME" : state.lastCommand}</span>
-      </footer>
     </main>
   );
 }
