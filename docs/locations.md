@@ -29,7 +29,7 @@ Harbour Hustle uses an HRM-only travel map. Location ids are stable config keys;
 
 | Location | Dealers | Street intel contacts |
 |---|---|---|
-| Downtown Halifax | Shady Rich | Barrington Sue |
+| Downtown Halifax | Shady Rich, Sweet Aidan | Barrington Sue, Shanobi |
 | North End Halifax | Mama Dee, Needle Nick | Tin Can Marty |
 | West End Halifax | J-Wood | Chebucto Cam |
 | Dartmouth | Boardwalk Sal | Boardwalk Benny |

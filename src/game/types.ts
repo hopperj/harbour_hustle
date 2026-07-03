@@ -2,7 +2,16 @@ export type Tone = "info" | "good" | "warn" | "bad";
 
 export type DealType = "normal" | "cheap" | "expensive" | "none";
 
-export type DealerTrait = "loyal" | "greedy" | "violent" | "paranoid" | "connected" | "proud" | "unpredictable" | "conspiracy";
+export type DealerTrait =
+  | "loyal"
+  | "greedy"
+  | "violent"
+  | "paranoid"
+  | "connected"
+  | "proud"
+  | "unpredictable"
+  | "conspiracy"
+  | "sketchy";
 
 export type IntelTopic = "market" | "dealer" | "police" | "turf" | "opportunity";
 
@@ -78,13 +87,14 @@ export interface DealerConfig {
   weaponGunId: string;
   guardCount: number;
   approachOffer?: DealerApproachOffer;
+  dialogueLines?: string[];
 }
 
 export interface HoboConfig {
   id: string;
   name: string;
   locationId: string;
-  dialogStyle?: "hoser";
+  dialogStyle?: "hoser" | "rhyme";
   toughness: number;
   trustThreshold: number;
   fearThreshold: number;

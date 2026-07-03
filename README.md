@@ -22,6 +22,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full change history.
 - Action-report overlays for robbery, combat, intel purchases, threats, and follow-up dialog choices.
 - Market price history and per-drug price charts, including simulated history before day one and gaps when a drug was unavailable.
 - Player-facing Halifax flavor: Tims, Timbits, hoser phrasing, "eh", "my guy", apologetic police, swearing, and local NPC personalities.
+- Downtown Halifax now includes Shanobi, a rhyming fiddle-playing intel contact, and Sweet Aidan, a sketchy dealer with odd questions and obscure facts.
 - Canadian improvised weapon shop replacing firearms: tire iron, glass Coke-a-Cola bottle, sock full of loonies, sharpened hockey stick, Zamboni-part mace, bow and arrow, and more.
 - New Game button in the persistent status bar.
 - Structured NPC context documents in `docs/npcs/` for future LLM-driven dialog.

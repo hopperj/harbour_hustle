@@ -793,6 +793,132 @@ function hoserOpportunityIntelText(
   ]);
 }
 
+function rhymeMarketIntelText(
+  config: GameConfig,
+  state: GameState,
+  hobo: HoboConfig,
+  drug: DrugConfig,
+  quote: MarketQuote,
+  accurate: boolean,
+): string {
+  if (accurate) {
+    if (quote.price > 0) {
+      return pickFlavorLine(state, `${hobo.id}-${drug.id}-rhyme-market-hot`, [
+        `${hobo.name} bows low: "${drug.name} rings at ${formatMoney(config, quote.price)} on the street; move with the tune or miss the beat."`,
+        `${hobo.name} sings: "${drug.name} hums at ${formatMoney(config, quote.price)} tonight; step soft in the harbour light."`,
+        `${hobo.name} says: "${drug.name} plays at ${formatMoney(config, quote.price)} in town; buy on the upbeat or ride it down."`,
+      ]);
+    }
+
+    const bid = formatMoney(config, marketBidPrice(config, state, drug));
+    return pickFlavorLine(state, `${hobo.id}-${drug.id}-rhyme-market-dry`, [
+      `${hobo.name} sings: "${drug.name} is gone, no hand has a share; buyers still whisper ${bid} in the air."`,
+      `${hobo.name} bows: "${drug.name} went quiet, no stock in sight; bids hum near ${bid} through the night."`,
+      `${hobo.name} says: "${drug.name} is missing from every lane; buyers still murmur ${bid} in the rain."`,
+    ]);
+  }
+
+  const location = randomChoice(state, config.locations);
+  return pickFlavorLine(state, `${hobo.id}-${drug.id}-${location.id}-rhyme-market-fake`, [
+    `${hobo.name} claims: "${drug.name} will blaze in ${location.name} tonight; but that fiddle sounds crooked and light."`,
+    `${hobo.name} sings: "${drug.name} is hot in ${location.name}, clear and bright; still, that tune may vanish by night."`,
+    `${hobo.name} says: "${drug.name} will rise where ${location.name} lies; but the bow shakes hard and the note tells lies."`,
+  ]);
+}
+
+function rhymeDealerIntelText(
+  config: GameConfig,
+  state: GameState,
+  hobo: HoboConfig,
+  dealer: DealerConfig,
+  threshold: number,
+  accurate: boolean,
+): string {
+  const dealerName = dealerDisplayName(config, dealer);
+  if (accurate) {
+    return pickFlavorLine(state, `${hobo.id}-${dealer.id}-rhyme-dealer-true`, [
+      `${hobo.name} sings: "${dealerName} runs ${dealer.traits.join("/")} nearby; cross ${threshold}, and the door goes dry."`,
+      `${hobo.name} bows: "${dealerName} keeps ${dealer.traits.join("/")} in the eye; sink past ${threshold}, and trust says bye."`,
+      `${hobo.name} says: "${dealerName}'s line is ${dealer.traits.join("/")} and sly; fall below ${threshold}, and trades won't fly."`,
+    ]);
+  }
+
+  return pickFlavorLine(state, `${hobo.id}-${dealer.id}-rhyme-dealer-fake`, [
+    `${hobo.name} sings: "${dealerName} looks soft, or so the rumours cry; that tune is cracked, and the bow runs dry."`,
+    `${hobo.name} says: "${dealerName} seems easy if you try; but sweet songs can hide a lie."`,
+    `${hobo.name} bows: "${dealerName} has no bite, the whispers imply; yet the string shakes wrong when I draw it by."`,
+  ]);
+}
+
+function rhymePoliceIntelText(
+  state: GameState,
+  hobo: HoboConfig,
+  location: LocationConfig,
+  accurate: boolean,
+  presence: number,
+  fakeRisk?: string,
+): string {
+  if (accurate) {
+    return pickFlavorLine(state, `${hobo.id}-${location.id}-rhyme-police-true`, [
+      `${hobo.name} sings: "${location.name} has ${presence}% heat tonight; sorry badges glow under harbour light."`,
+      `${hobo.name} bows: "${location.name} reads ${riskLabel(presence)} in the lane; ${presence}% heat taps glass like rain."`,
+      `${hobo.name} says: "${location.name} runs ${riskLabel(presence)} where the cruisers veer; ${presence}% pressure, keep your fiddle ear clear."`,
+    ]);
+  }
+
+  return pickFlavorLine(state, `${hobo.id}-${location.id}-rhyme-police-fake`, [
+    `${hobo.name} claims: "${location.name} is ${fakeRisk} tonight; then forgets the tune by morning light."`,
+    `${hobo.name} sings: "${location.name} is ${fakeRisk}, I swear it is right; but the last note stumbles out of sight."`,
+    `${hobo.name} says: "${location.name} feels ${fakeRisk}, with no cops near; yet the rhyme rings hollow in my ear."`,
+  ]);
+}
+
+function rhymeTurfIntelText(
+  state: GameState,
+  hobo: HoboConfig,
+  location: LocationConfig,
+  influence: number,
+  accurate: boolean,
+): string {
+  if (accurate) {
+    return pickFlavorLine(state, `${hobo.id}-${location.id}-rhyme-turf-true`, [
+      `${hobo.name} sings: "Your turf in ${location.name} is ${influenceLabel(influence)} at ${influence}, clear; keep your ear low, the pavement can hear."`,
+      `${hobo.name} bows: "${location.name} marks you ${influenceLabel(influence)} at ${influence} near; the street keeps score where the footsteps steer."`,
+      `${hobo.name} says: "${location.name} calls you ${influenceLabel(influence)}, ${influence} in the air; play soft or the block will stare."`,
+    ]);
+  }
+
+  return pickFlavorLine(state, `${hobo.id}-${location.id}-rhyme-turf-fake`, [
+    `${hobo.name} sings: "${location.name} loves you, every alley and pier; but that chorus sounds false in my ear."`,
+    `${hobo.name} bows: "${location.name} is yours, no worry or fear; yet the fiddle goes flat when that claim gets near."`,
+    `${hobo.name} says: "${location.name} is friendly from gutter to gear; but the street hums doubt for all to hear."`,
+  ]);
+}
+
+function rhymeOpportunityIntelText(
+  config: GameConfig,
+  state: GameState,
+  hobo: HoboConfig,
+  dealer: DealerConfig,
+  accurate: boolean,
+): string {
+  const dealerName = dealerDisplayName(config, dealer);
+  if (accurate) {
+    const danger = dealer.toughness + dealer.guardCount * 24 + Math.floor(dealer.violence / 2);
+    return pickFlavorLine(state, `${hobo.id}-${dealer.id}-rhyme-opportunity-true`, [
+      `${hobo.name} sings: "${dealerName} keeps greed ${dealer.greed} in the till; danger reads ${riskLabel(danger)} on the hill."`,
+      `${hobo.name} bows: "${dealerName}'s cash rings heavy and still; but ${riskLabel(danger)} danger waits by the sill."`,
+      `${hobo.name} says: "${dealerName} has money enough for a thrill; the danger says ${riskLabel(danger)}, so test your will."`,
+    ]);
+  }
+
+  return pickFlavorLine(state, `${hobo.id}-${dealer.id}-rhyme-opportunity-fake`, [
+    `${hobo.name} sings: "${dealerName} is loaded and alone by the pier; when it sounds that sweet, keep danger near."`,
+    `${hobo.name} bows: "${dealerName} has cash and no crew to appear; but a perfect little tune can hide a spear."`,
+    `${hobo.name} says: "${dealerName} carries riches with nobody near; that song rings too clean in my ear."`,
+  ]);
+}
+
 function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfig, accuracyModifier = 0): IntelReport {
   let topicIndex = 0;
   [state.rngState, topicIndex] = randomInt(state.rngState, 0, 5);
@@ -807,6 +933,8 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
     const quote = marketQuote(state, drug.id);
     if (hobo.dialogStyle === "hoser") {
       text = hoserMarketIntelText(config, state, hobo, drug, quote, accurate);
+    } else if (hobo.dialogStyle === "rhyme") {
+      text = rhymeMarketIntelText(config, state, hobo, drug, quote, accurate);
     } else if (accurate) {
       text = quote.price > 0
         ? `${hobo.name} says ${drug.name} is moving here at ${formatMoney(config, quote.price)}.`
@@ -821,6 +949,8 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
     const dealerName = dealerDisplayName(config, dealer);
     if (hobo.dialogStyle === "hoser") {
       text = hoserDealerIntelText(config, state, hobo, dealer, dealerRefusalThreshold(dealer, state), accurate);
+    } else if (hobo.dialogStyle === "rhyme") {
+      text = rhymeDealerIntelText(config, state, hobo, dealer, dealerRefusalThreshold(dealer, state), accurate);
     } else if (accurate) {
       text = `${hobo.name} says ${dealerName} is ${dealer.traits.join("/")} and cuts people off near relationship ${dealerRefusalThreshold(dealer, state)}.`;
     } else {
@@ -836,6 +966,13 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
         const fakeRisk = randomChoice(state, ["LOW", "MED", "HIGH"]);
         text = hoserPoliceIntelText(state, hobo, location, accurate, presence, fakeRisk);
       }
+    } else if (hobo.dialogStyle === "rhyme") {
+      if (accurate) {
+        text = rhymePoliceIntelText(state, hobo, location, accurate, presence);
+      } else {
+        const fakeRisk = randomChoice(state, ["LOW", "MED", "HIGH"]);
+        text = rhymePoliceIntelText(state, hobo, location, accurate, presence, fakeRisk);
+      }
     } else if (accurate) {
       text = `${hobo.name} says police pressure in ${location.name} is ${riskLabel(presence)} at ${presence}%.`;
     } else {
@@ -847,6 +984,8 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
     const influence = locationInfluence(state, location.id);
     if (hobo.dialogStyle === "hoser") {
       text = hoserTurfIntelText(state, hobo, location, influence, accurate);
+    } else if (hobo.dialogStyle === "rhyme") {
+      text = rhymeTurfIntelText(state, hobo, location, influence, accurate);
     } else if (accurate) {
       text = `${hobo.name} says your turf in ${location.name} is ${influenceLabel(influence)} (${influence}).`;
     } else {
@@ -857,6 +996,8 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
     const dealerName = dealerDisplayName(config, dealer);
     if (hobo.dialogStyle === "hoser") {
       text = hoserOpportunityIntelText(config, state, hobo, dealer, accurate);
+    } else if (hobo.dialogStyle === "rhyme") {
+      text = rhymeOpportunityIntelText(config, state, hobo, dealer, accurate);
     } else if (accurate) {
       const danger = dealer.toughness + dealer.guardCount * 24 + Math.floor(dealer.violence / 2);
       text = `${hobo.name} says ${dealerName} is cash-rich (${dealer.greed}) but danger ${riskLabel(danger)}.`;
@@ -873,7 +1014,7 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
     sourceName: hobo.name,
     locationId: hobo.locationId,
     topic,
-    text: withEh(state, withSwearing(state, text, 38), 72),
+    text: hobo.dialogStyle === "rhyme" ? text : withEh(state, withSwearing(state, text, 38), 72),
     accurate,
   };
 }
@@ -1733,7 +1874,11 @@ function resolveHoboThreat(config: GameConfig, state: GameState, hobo: HoboConfi
   [state.rngState, resistRoll] = randomInt(state.rngState, 0, Math.max(1, resistance));
 
   if (threatRoll > resistRoll) {
-    pushLog(state, "warn", withEh(state, withSwearing(state, `${hobo.name} talks fast.`, 32), 75));
+    if (hobo.dialogStyle === "rhyme") {
+      pushLog(state, "warn", `${hobo.name} bows sharp: "Keep your hands still and your voice low; I'll give you a song, then you go."`);
+    } else {
+      pushLog(state, "warn", withEh(state, withSwearing(state, `${hobo.name} talks fast.`, 32), 75));
+    }
     recordIntelReport(config, state, hobo, -20);
     return;
   }
@@ -1742,13 +1887,21 @@ function resolveHoboThreat(config: GameConfig, state: GameState, hobo: HoboConfi
   [state.rngState, fightRoll] = randomInt(state.rngState, 0, 100);
   if (fightRoll < 55) {
     const damage = Math.max(1, Math.floor(hobo.toughness / 8));
-    pushLog(state, "bad", withEh(state, withViolentSorry(state, `${hobo.name} fights back.`), 65));
+    if (hobo.dialogStyle === "rhyme") {
+      pushLog(state, "bad", withViolentSorry(state, `${hobo.name} snaps back, "Sorry, sorry, pain in a bow; push me again and down you go."`, 65));
+    } else {
+      pushLog(state, "bad", withEh(state, withViolentSorry(state, `${hobo.name} fights back.`), 65));
+    }
     damagePlayer(config, state, damage);
     maybeDoctor(config, state);
     return;
   }
 
-  pushLog(state, "warn", withEh(state, withSwearing(state, `${hobo.name} gives you a story that does not quite add up.`, 32), 75));
+  if (hobo.dialogStyle === "rhyme") {
+    pushLog(state, "warn", `${hobo.name} sings a crooked tale: "It might be true, it might be smoke; the string just bent and nearly broke."`);
+  } else {
+    pushLog(state, "warn", withEh(state, withSwearing(state, `${hobo.name} gives you a story that does not quite add up.`, 32), 75));
+  }
   recordIntelReport(config, state, hobo, -55);
 }
 

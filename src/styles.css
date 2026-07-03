@@ -388,6 +388,10 @@ p {
   text-transform: uppercase;
 }
 
+.dealer-line {
+  margin-block-start: 0.65rem;
+}
+
 .gift-only {
   border-block-start: 1px dashed var(--border-soft);
   padding-block-start: 0.65rem;

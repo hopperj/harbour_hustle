@@ -7,6 +7,8 @@ All notable changes to Harbour Hustle are documented here.
 ### Added
 
 - Added action-report overlays for robbery, combat, intel purchases, hobo threats, and follow-up prompt choices.
+- Added Shanobi as a Downtown Halifax street intel contact who plays fiddle and speaks in rhyme.
+- Added Sweet Aidan as a Downtown Halifax dealer with sketchy odd-question dialog and obscure-fact flavor.
 
 ## [0.9.0] - 2026-07-03
 

@@ -54,6 +54,22 @@ function favoriteDrugNames(config: GameConfig, hobo: HoboConfig): string {
 }
 
 function contactLine(hobo: HoboConfig, relationship: number, price: number, canAffordIntel: boolean): string {
+  if (hobo.dialogStyle === "rhyme") {
+    if (relationship < -40) {
+      return `${hobo.name} rosins the bow. "Cross me again and hear the string; ask real careful or feel the sting."`;
+    }
+
+    if (price > 0 && !canAffordIntel) {
+      return `${hobo.name} taps the fiddle case. "No Tims in hand, no tale in flight; bring me a cup and I'll sing it right."`;
+    }
+
+    if (price === 0) {
+      return `${hobo.name} leans close. "Trust earned the tune, so ask what you bring; I'll bow you the truth on a Halifax string."`;
+    }
+
+    return `${hobo.name} smiles over the fiddle. "Buy me a Tims and I'll hum what I know; the harbour keeps secrets where cold waters flow."`;
+  }
+
   if (relationship < -40) {
     return `${hobo.name} keeps a hard eye on you. "Talk quick, eh. I'm not in the mood for bullshit."`;
   }
@@ -113,6 +129,7 @@ export function StreetIntelPanel({ config, state, dispatch }: StreetIntelPanelPr
             <TerminalButton
               key={hobo.id}
               className={hobo.id === selectedHobo.id ? "hobo-tab is-active" : "hobo-tab"}
+              data-hobo-id={hobo.id}
               onClick={() => setSelectedHoboId(hobo.id)}
             >
               {hobo.name}

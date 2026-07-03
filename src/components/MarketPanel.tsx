@@ -64,6 +64,15 @@ function bidPriceFor(drug: DrugConfig, price: number, bidPrice: number | undefin
   return bidPrice ?? (price > 0 ? price : Math.floor((drug.minPrice + drug.maxPrice) / 2));
 }
 
+function dealerDialogueLine(dealer: DealerConfig, state: GameState): string | null {
+  if (!dealer.dialogueLines?.length) {
+    return null;
+  }
+
+  const idWeight = Array.from(dealer.id).reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  return dealer.dialogueLines[Math.abs(idWeight + state.player.turn + state.player.reputation) % dealer.dialogueLines.length];
+}
+
 interface PriceChartProps {
   config: GameConfig;
   drug: DrugConfig;
@@ -245,6 +254,7 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
   const dealerRelationship = selectedDealer ? state.dealerRelationships?.[selectedDealer.id] ?? 0 : 0;
   const dealerRefusal = selectedDealer ? dealerRefusalThreshold(selectedDealer, state) : 0;
   const dealerRefuses = selectedDealer ? dealerRelationship < dealerRefusal : true;
+  const selectedDealerLine = selectedDealer ? dealerDialogueLine(selectedDealer, state) : null;
   const currentInfluence = locationInfluence(state, state.player.locationId);
   const dealerDrugs = selectedDealer
     ? selectedDealer.drugIds.map((drugId) => config.drugs.find((drug) => drug.id === drugId)).filter((drug): drug is DrugConfig => Boolean(drug))
@@ -275,6 +285,7 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
                 <TerminalButton
                   key={dealer.id}
                   className={dealer.id === selectedDealer.id ? "dealer-tab is-active" : "dealer-tab"}
+                  data-dealer-id={dealer.id}
                   onClick={() => {
                     setSelectedDealerId(dealer.id);
                     approachDealer(dealer);
@@ -320,6 +331,7 @@ export function MarketPanel({ config, state, dispatch }: MarketPanelProps) {
                   <dd>{selectedDealer.traits.join("/")}</dd>
                 </div>
               </dl>
+              {selectedDealerLine && <p className="npc-line dealer-line">{selectedDealerLine}</p>}
               {dealerRefuses && <p className="dealer-warning">{selectedDealer.name} refuses to deal. Gifts or robbery are still options.</p>}
             </div>
             <TerminalButton
