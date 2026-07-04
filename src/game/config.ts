@@ -189,6 +189,48 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
     { id: "saturday-night-special", name: "Zamboni-Part Mace", price: 3300, space: 5, damage: 7 },
     { id: "38-special", name: "Bow and Arrow", price: 3600, space: 4, damage: 9 },
   ],
+  merchants: [
+    {
+      id: "sackville-salvage",
+      name: "Sackville Salvage & Sporting Goods",
+      locationId: "sackville",
+      gunIds: ["glass-coke-bottle", "tire-iron", "fillet-knife", "ruger", "baretta", "saturday-night-special", "38-special"],
+      markup: 100,
+      bid: 72,
+    },
+    {
+      id: "north-end-junk-counter",
+      name: "North End Junk Counter",
+      locationId: "north-end-halifax",
+      gunIds: ["glass-coke-bottle", "fillet-knife", "ruger"],
+      markup: 92,
+      bid: 64,
+    },
+    {
+      id: "spryfield-swap-table",
+      name: "Spryfield Swap Table",
+      locationId: "spryfield",
+      gunIds: ["tire-iron", "baretta", "saturday-night-special"],
+      markup: 108,
+      bid: 76,
+    },
+    {
+      id: "dartmouth-sporting-shelf",
+      name: "Dartmouth Sporting Shelf",
+      locationId: "dartmouth",
+      gunIds: ["fillet-knife", "ruger", "38-special"],
+      markup: 118,
+      bid: 78,
+    },
+    {
+      id: "dockside-barter-crate",
+      name: "Dockside Barter Crate",
+      locationId: "eastern-passage",
+      gunIds: ["glass-coke-bottle", "tire-iron", "fillet-knife"],
+      markup: 86,
+      bid: 58,
+    },
+  ],
   cops: [
     {
       id: "hardass",

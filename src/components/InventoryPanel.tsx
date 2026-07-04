@@ -78,6 +78,33 @@ export function InventoryPanel({ config, state }: InventoryPanelProps) {
       </div>
 
       <div>
+        <h2>{config.names.gunPlural}</h2>
+        <table className="terminal-table compact-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Space</th>
+              <th>Damage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {config.guns.map((gun) => {
+              const carried = state.player.guns[gun.id]?.carried ?? 0;
+              return (
+                <tr key={gun.id} className={carried === 0 ? "is-empty" : ""}>
+                  <td>{gun.name}</td>
+                  <td>{carried}</td>
+                  <td>{gun.space}</td>
+                  <td>{gun.damage}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
         <h2>CARRYING CAPACITY</h2>
         <div className="capacity-meter" aria-label={`${used} used out of ${capacity}`}>
           <span style={{ inlineSize: `${usedPercent}%` }} />

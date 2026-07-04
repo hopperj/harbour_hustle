@@ -19,14 +19,17 @@ See [CHANGELOG.md](CHANGELOG.md) for the full change history.
 - Stay-in-place and travel actions, each advancing the simulation.
 - Dealer-specific drug coverage, stock, relationship thresholds, gifting, robbery, retaliation, combat, and reputation effects.
 - Named street intel contacts with trust, threats, gifts, paid intel, and conversational dialog options.
-- Action-report overlays for robbery, combat, intel purchases, threats, and follow-up dialog choices.
+- Dialog-style overlays for robbery, combat, police encounters, random events, intel purchases, threats, side offers, and follow-up choices.
 - Typed NPC conversation windows for dealers and street contacts, with Ollama-backed replies when available.
+- Persistent NPC memory for chat, trades, gifts, threats, robberies, offers, and intel, including relative timing in later prompts.
 - Startup Ollama availability check with static fallback dialog when the local model is offline.
 - Ollama-backed NPC dialog generation that feeds each NPC's markdown context into `llama3.1:8b`.
+- Prompt rails keep generated NPC dialog in character, prevent invented mechanics, and encourage adult Halifax street profanity without slurs.
 - Market price history and per-drug price charts, including simulated history before day one and gaps when a drug was unavailable.
 - Player-facing Halifax flavor: Tims, Timbits, hoser phrasing, "eh", "my guy", apologetic police, swearing, and local NPC personalities.
 - Downtown Halifax now includes Shanobi, a rhyming fiddle-playing intel contact, and Sweet Aidan, a sketchy dealer with odd questions and obscure facts.
-- Canadian improvised weapon shop replacing firearms: tire iron, glass Coke-a-Cola bottle, sock full of loonies, sharpened hockey stick, Zamboni-part mace, bow and arrow, and more.
+- Location merchants with changing buy/sell prices who sell configured weapon/item lists and buy any carried weapon.
+- Canadian improvised weapons replacing firearms: tire iron, glass Coke-a-Cola bottle, sock full of loonies, sharpened hockey stick, Zamboni-part mace, bow and arrow, and more.
 - New Game button in the persistent status bar.
 - Structured NPC context documents in `docs/npcs/` for runtime LLM-driven dialog.
 
@@ -103,6 +106,7 @@ The zip contains the built `index.html` and `assets/` files at the archive root.
 ## Project Structure
 
 - `src/game/` - core game config, types, RNG, formatting, and engine logic.
+- `src/game/npcMemory.ts` - prompt formatting for persistent NPC interaction memory.
 - `src/hooks/useNpcDialogue.ts` - local Ollama dialog hook that feeds NPC markdown into each prompt.
 - `src/hooks/useOllamaAvailability.ts` - startup Ollama health check used to choose generated or fallback dialog.
 - `src/components/` - React UI panels and terminal controls.

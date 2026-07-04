@@ -55,10 +55,15 @@ export function TravelPanel({ config, state, dispatch }: TravelPanelProps) {
               aria-current={active ? "location" : undefined}
               onClick={() => dispatch({ type: "travel", locationId: location.id })}
             >
-              <span>{active ? "> " : ""}{location.name}</span>
-              <span>{policePresence}%</span>
-              <span className={turfClass(influence)}>T{influence}</span>
-              <span className={risk === "HIGH" ? "money-bad" : risk === "MED" ? "money-warn" : "money-good"}>{risk}</span>
+              <span className="travel-location-name">
+                {location.name}
+                {active && <span className="travel-current-label">CURRENT</span>}
+              </span>
+              <span className="travel-location-stats">
+                <span>{policePresence}% police</span>
+                <span className={turfClass(influence)}>Turf {influence}</span>
+                <span className={risk === "HIGH" ? "money-bad" : risk === "MED" ? "money-warn" : "money-good"}>{risk} risk</span>
+              </span>
             </TerminalButton>
           );
         })}

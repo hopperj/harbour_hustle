@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TerminalButton } from "./TerminalButton";
 import { dealerRefusalThreshold, locationInfluence } from "../game/engine";
 import { formatDate, formatMoney, parseAmount } from "../game/format";
+import { npcSceneRails } from "../game/llmDialogue";
+import { formatNpcMemoryForPrompt } from "../game/npcMemory";
 import type { DealerConfig, DrugConfig, GameCommand, GameConfig, GameState, PriceHistoryEntry } from "../game/types";
 import { useNpcDialogue } from "../hooks/useNpcDialogue";
 import type { NpcConversationTarget } from "./ConversationOverlay";
@@ -75,6 +77,22 @@ function dealerDialogueLine(dealer: DealerConfig, state: GameState): string {
   }
 
   return `${dealer.name} looks you over. "You buying, selling, or wasting my damn time?"`;
+}
+
+function dealerStatus(dealer: DealerConfig, relationship: number, refusal: number): string {
+  if (relationship < refusal) {
+    return `${dealer.name} is refusing business. Gifts or robbery still change the situation.`;
+  }
+
+  if (relationship >= 70) {
+    return `${dealer.name} is ready for business and more open to side talk.`;
+  }
+
+  if (relationship < 0) {
+    return `${dealer.name} will trade, but the room is cold.`;
+  }
+
+  return `${dealer.name} is available for trades, gifts, robbery, or chat.`;
 }
 
 interface PriceChartProps {
@@ -287,9 +305,12 @@ export function MarketPanel({ config, state, dispatch, llmAvailable, onTalkToNpc
       `Relationship with player: ${dealerRelationship}; refuses below ${dealerRefusal}.`,
       `Player reputation: ${state.player.reputation}; local turf influence: ${currentInfluence}.`,
       `Current dealer stock and prices: ${stockLines.join("; ")}.`,
+      "Prior direct history with this dealer:",
+      formatNpcMemoryForPrompt(state, selectedDealer.id),
+      ...npcSceneRails("Open with attitude before business starts. Use only the provided stock, price, relationship, and history facts."),
       "Say a short opening line before business starts.",
     ].join("\n");
-  }, [config, currentInfluence, dealerDrugs, dealerRefusal, dealerRelationship, selectedDealer, state.dealerStock, state.market, state.player.reputation]);
+  }, [config, currentInfluence, dealerDrugs, dealerRefusal, dealerRelationship, selectedDealer, state, state.dealerStock, state.market, state.player.reputation]);
   const selectedDealerDialogue = useNpcDialogue({
     config,
     disabled: !selectedDealer || Boolean(selectedDrug),
@@ -297,7 +318,7 @@ export function MarketPanel({ config, state, dispatch, llmAvailable, onTalkToNpc
     llmAvailable,
     npcId: selectedDealer?.id,
     npcName: selectedDealer?.name,
-    refreshKey: `${state.player.turn}:${state.player.locationId}:${selectedDealer?.id ?? ""}:${dealerRelationship}:${state.player.reputation}`,
+    refreshKey: `${state.player.turn}:${state.player.locationId}:${selectedDealer?.id ?? ""}:${dealerRelationship}:${state.player.reputation}:${state.npcMemory?.length ?? 0}`,
     scene: selectedDealerScene,
   });
 
@@ -317,6 +338,7 @@ export function MarketPanel({ config, state, dispatch, llmAvailable, onTalkToNpc
         "The player clicked TALK on the dealer card and can type directly to this dealer.",
         "The dealer can talk about business, trust, danger, local rumors, prices, or refusing to answer.",
         "This typed conversation is flavor and soft intel only; it cannot perform trades, change stock, give items, change relationship, or advance time.",
+        ...npcSceneRails("Dealer chat can hint, posture, threaten, or deflect, but cannot complete a trade or create new facts."),
       ].join("\n"),
       title: `TALK TO ${selectedDealer.name.toUpperCase()}`,
       tone: dealerRefuses ? "warn" : "info",
@@ -352,7 +374,7 @@ export function MarketPanel({ config, state, dispatch, llmAvailable, onTalkToNpc
                   }}
                 >
                   {dealer.name}
-                  <span className={relationshipClass(relationship)}>{relationshipLabel(relationship)}</span>
+                  <span className={relationshipClass(relationship)}>DEALER / {relationshipLabel(relationship)}</span>
                 </TerminalButton>
               );
             })}
@@ -391,7 +413,7 @@ export function MarketPanel({ config, state, dispatch, llmAvailable, onTalkToNpc
                   <dd>{selectedDealer.traits.join("/")}</dd>
                 </div>
               </dl>
-              {selectedDealerLine && <p className="npc-line dealer-line">{selectedDealerDialogue.text}</p>}
+              <p className="interaction-status dealer-line">{dealerStatus(selectedDealer, dealerRelationship, dealerRefusal)}</p>
               {dealerRefuses && <p className="dealer-warning">{selectedDealer.name} refuses to deal. Gifts or robbery are still options.</p>}
             </div>
             <div className="dealer-actions">
@@ -399,7 +421,7 @@ export function MarketPanel({ config, state, dispatch, llmAvailable, onTalkToNpc
                 disabled={state.pendingPrompt !== null || state.gameOver}
                 onClick={startDealerConversation}
               >
-                TALK
+                CHAT
               </TerminalButton>
               <TerminalButton
                 tone="bad"

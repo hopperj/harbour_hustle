@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { TerminalButton } from "./TerminalButton";
 import { hoboIntelPrice } from "../game/engine";
 import { formatMoney, parseAmount } from "../game/format";
+import { npcSceneRails } from "../game/llmDialogue";
+import { formatNpcMemoryForPrompt } from "../game/npcMemory";
 import type { GameCommand, GameConfig, GameState, HoboConfig } from "../game/types";
 import { useNpcDialogue } from "../hooks/useNpcDialogue";
 import type { NpcConversationTarget } from "./ConversationOverlay";
@@ -89,6 +91,22 @@ function contactLine(hobo: HoboConfig, relationship: number, price: number, canA
   return `${hobo.name} glances down the block. "Buy me a Tims and I'll tell ya what's moving."`;
 }
 
+function contactStatus(hobo: HoboConfig, relationship: number, price: number, canAffordIntel: boolean): string {
+  if (relationship < -40) {
+    return `${hobo.name} is hostile. Intel, threats, and gifts may all go sideways.`;
+  }
+
+  if (price > 0 && !canAffordIntel) {
+    return `${hobo.name} wants payment before giving real local intel.`;
+  }
+
+  if (price === 0) {
+    return `${hobo.name} trusts you enough to share a local report for free.`;
+  }
+
+  return `${hobo.name} can sell intel, take gifts, face a threat, or chat.`;
+}
+
 export function StreetIntelPanel({ config, state, dispatch, llmAvailable, onTalkToNpc }: StreetIntelPanelProps) {
   const [selectedHoboId, setSelectedHoboId] = useState<string | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
@@ -127,9 +145,12 @@ export function StreetIntelPanel({ config, state, dispatch, llmAvailable, onTalk
       `Intel price right now: ${priceText}. Player cash: ${formatMoney(config, state.player.cash)}.`,
       `Can afford the intel: ${canAffordIntel ? "yes" : "no"}. Favorite gifts: ${favoriteDrugs}.`,
       `Player reputation: ${state.player.reputation}; local turf influence: ${state.locationInfluence[selectedHobo.locationId] ?? 0}.`,
+      "Prior direct history with this street contact:",
+      formatNpcMemoryForPrompt(state, selectedHobo.id),
+      ...npcSceneRails("Open before the player chooses intel, threat, or gift. Do not reveal exact hidden stats or free intel facts."),
       "Say the opening line for this conversation before the player chooses whether to buy intel, threaten, or gift drugs.",
     ].join("\n");
-  }, [canAffordIntel, config, price, relationship, selectedHobo, state.locationInfluence, state.player.cash, state.player.reputation]);
+  }, [canAffordIntel, config, price, relationship, selectedHobo, state, state.locationInfluence, state.player.cash, state.player.reputation]);
   const selectedHoboDialogue = useNpcDialogue({
     config,
     disabled: !selectedHobo,
@@ -137,7 +158,7 @@ export function StreetIntelPanel({ config, state, dispatch, llmAvailable, onTalk
     llmAvailable,
     npcId: selectedHobo?.id,
     npcName: selectedHobo?.name,
-    refreshKey: `${state.player.turn}:${state.player.locationId}:${selectedHobo?.id ?? ""}:${relationship}:${price}:${state.player.cash}`,
+    refreshKey: `${state.player.turn}:${state.player.locationId}:${selectedHobo?.id ?? ""}:${relationship}:${price}:${state.player.cash}:${state.npcMemory?.length ?? 0}`,
     scene: selectedHoboScene,
   });
 
@@ -166,6 +187,7 @@ export function StreetIntelPanel({ config, state, dispatch, llmAvailable, onTalk
         "The player clicked TALK in the Street Intel panel and can type directly to this street contact.",
         "The contact can chat, hint, ask for payment, refuse, warn, or steer the player toward buying intel, gifting, or backing off.",
         "This typed conversation is flavor and soft intel only; it cannot create a paid intel report, change relationship, accept gifts, trigger threats, or advance time.",
+        ...npcSceneRails("Street intel chat can tease or refuse information, but real intel must come from the buy/threat game action."),
       ].join("\n"),
       title: `TALK TO ${selectedHobo.name.toUpperCase()}`,
       tone: relationship < -40 ? "bad" : price === 0 ? "good" : "info",
@@ -224,14 +246,14 @@ export function StreetIntelPanel({ config, state, dispatch, llmAvailable, onTalk
       </div>
 
       <div className="conversation-panel" aria-label={`${selectedHobo.name} conversation`}>
-        <p className="npc-line">{selectedHoboDialogue.text}</p>
+        <p className="interaction-status">{contactStatus(selectedHobo, relationship, price, canAffordIntel)}</p>
         <div className="dialogue-options" aria-label="Dialog options">
           <TerminalButton
             className="dialogue-option"
             disabled={disabled}
             onClick={startHoboConversation}
           >
-            <span>TALK</span>
+            <span>CHAT</span>
             <small>Type your own question</small>
           </TerminalButton>
           <TerminalButton

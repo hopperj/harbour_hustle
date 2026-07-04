@@ -11,7 +11,7 @@ Harbour Hustle uses an HRM-only travel map. Location ids are stable config keys;
 | West End Halifax | `west-end-halifax` | 12 | 6-10 | Low-police balanced market with J-Wood and Chebucto Cam. |
 | Dartmouth | `dartmouth` | 45 | 6-12 | Mid-risk cross-harbour market with proud local dealers. |
 | Bedford | `bedford` | 30 | 5-10 | Lower-heat connected market. |
-| Sackville | `sackville` | 22 | 7-12 | Lower-police, higher-stock service stop with the weapon shop. |
+| Sackville | `sackville` | 22 | 7-12 | Lower-police, higher-stock service stop with a full salvage merchant. |
 | Spryfield | `spryfield` | 28 | 7-12 | Lower-police, higher-stock market with pub access. |
 | Halifax Public Gardens | `halifax-public-gardens` | 50 | 5-11 | Mid-police psychedelic market. |
 | Eastern Passage | `eastern-passage` | 18 | 6-12 | Low-police waterfront market. |
@@ -22,8 +22,19 @@ Harbour Hustle uses an HRM-only travel map. Location ids are stable config keys;
 |---|---|
 | Bank | Downtown Halifax |
 | Loan shark | Downtown Halifax |
-| Sackville Salvage & Sporting Goods | Sackville |
 | Pub | Spryfield |
+
+## Merchants
+
+Merchants sell a configured subset of weapons/items at daily market prices. Any merchant will buy any carried weapon, even if that merchant does not sell it.
+
+| Merchant | Location | Sells |
+|---|---|---|
+| Sackville Salvage & Sporting Goods | Sackville | Full improvised weapon list. |
+| North End Junk Counter | North End Halifax | Glass Coke-a-Cola Bottle, Rusty Fillet Knife, Sharpened Hockey Stick. |
+| Spryfield Swap Table | Spryfield | Tire Iron, Sock Full of Loonies, Zamboni-Part Mace. |
+| Dartmouth Sporting Shelf | Dartmouth | Rusty Fillet Knife, Sharpened Hockey Stick, Bow and Arrow. |
+| Dockside Barter Crate | Eastern Passage | Glass Coke-a-Cola Bottle, Tire Iron, Rusty Fillet Knife. |
 
 ## NPC Placement
 

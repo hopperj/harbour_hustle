@@ -6,6 +6,10 @@ Each NPC file uses the same headings so runtime retrieval can feed a consistent 
 
 Each file should also keep a `Hoser Saying Reference` and `Example Dialog` section. These give the runtime prompt concrete slang, rhythm, and sample lines for that NPC without hardcoding the exact generated output.
 
+Runtime prompts also include persistent NPC memory. The game records direct chat, trades, gifts, threats, robberies, side offers, and intel handoffs, then summarizes that prior history with relative timing in later prompts. NPC files should leave room for characters to react to that history without contradicting the mechanical scene.
+
+Generated lines are constrained by shared prompt rails in `src/game/llmDialogue.ts`: stay as the active NPC, return one spoken line, do not invent prices/stock/injuries/locations/relationships/police state/intel/outcomes, and keep adult profanity as Halifax street texture without slurs or sexual threats.
+
 ## Dealers
 
 - [Mama Dee](mama-dee.md)

@@ -15,10 +15,29 @@ All notable changes to Harbour Hustle are documented here.
 - Added a strict per-query Ollama system prompt that forces the model to stay in character as the active NPC.
 - Added typed NPC conversation windows and TALK buttons for dealers, street contacts, and action-report follow-up dialog.
 - Added a startup Ollama availability check with static fallback dialog when the configured model is offline.
+- Added persistent NPC memory for chat, trades, gifts, threats, robberies, offers, and intel so later conversations can reference prior history.
+- Added dialog-window handling for random encounters, police prompts, robbery reports, and dealer side offers.
+- Added LLM-generated hobo/intel handoff lines using game-decided intel facts.
+- Added local merchants in multiple locations with changing buy/sell prices, configured sell lists, and buy-anything weapon purchasing.
+- Added weapons/items inventory display.
+- Added same-day successful robbery tracking and a disabled/enabled `ROB AGAIN` follow-up action.
+- Added shared NPC prompt rails for adult Halifax street profanity while blocking invented mechanics, slurs, and out-of-character assistant behavior.
 
 ### Changed
 
 - Changed deterministic street intel entries to display as mechanical summaries so generated NPC lines carry the spoken dialog.
+- Changed hobo intel so it avoids UI-visible facts such as exact police risk labels, dealer relationship values, and reputation/turf numbers.
+- Changed robbery summaries to use factual log text while leaving character reactions to generated NPC dialog.
+- Changed prompt encounters so the mechanical text remains stable while generated NPC speech appears separately after the LLM response.
+- Changed the travel panel so current location and long names are easier to read.
+- Changed the status bar and app columns to improve space allocation and avoid clipped values.
+- Changed dealer selector tabs to label dealers explicitly.
+
+### Fixed
+
+- Fixed stale typed NPC chat overlays remaining visible over later encounter or run/fight result dialogs.
+- Fixed conversation scrolling and Enter-to-send behavior in typed chat.
+- Fixed merchant/weapon state hydration for older saves.
 
 ## [0.9.0] - 2026-07-03
 

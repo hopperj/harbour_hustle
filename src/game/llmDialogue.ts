@@ -23,6 +23,25 @@ interface OllamaTagsResponse {
 
 export type OllamaAvailability = "checking" | "available" | "unavailable";
 
+export const NPC_STYLE_RAILS = [
+  "Style rails:",
+  "- Use casual adult profanity as ambient Halifax street texture when it fits the NPC and scene.",
+  "- Good swear beats include short phrases like \"fuckin' right, boy\", \"fuck, shit, sorry\", \"fuuuuckin' eh\", \"for fuck's sake\", \"shit, bud\", or \"sorry, this is fucked\".",
+  "- Keep profanity passive and conversational, not a wall of insults; one swear beat is usually enough.",
+  "- Do not use slurs, hate terms, or sexual threats.",
+  "- Keep the line grounded in the NPC's documented personality, role, and current scene.",
+  "- Never invent mechanical facts. Only mention prices, stock, injuries, locations, relationships, police state, intel, or outcomes when the scene explicitly provides them.",
+  "- If the player asks for facts or rewards the scene does not provide, refuse or deflect in character and point them toward the proper game action.",
+];
+
+export function npcSceneRails(focus?: string): string[] {
+  return [
+    ...NPC_STYLE_RAILS,
+    ...(focus ? [`Scene focus: ${focus}`] : []),
+    "Return one direct spoken NPC line only.",
+  ];
+}
+
 function buildSystemPrompt({ npcName }: GenerateNpcDialogueParams): string {
   return [
     `You are ${npcName}, and only ${npcName}, a non-player character in Harbour Hustle.`,
@@ -44,10 +63,12 @@ function buildSystemPrompt({ npcName }: GenerateNpcDialogueParams): string {
     "- Do not invent prices, inventory, locations, injuries, relationships, or outcomes unless the scene gives them.",
     "- Use the NPC file's Hoser Saying Reference and Example Dialog as style guidance, but do not copy examples verbatim unless the current scene clearly fits.",
     "- If a hot drink is mentioned, say Tims.",
-    "- The game is for adults; swearing is allowed when it fits the NPC.",
+    "- The game is for adults; swearing is encouraged as casual texture when it fits the NPC.",
     "- Halifax flavor may include eh, my guy, bud, Tims, Timbits, and apologetic threats.",
     "- If the NPC context says they rhyme, every line must rhyme.",
     "- If police or a violent NPC threatens someone, they should say sorry while still sounding dangerous.",
+    "",
+    ...NPC_STYLE_RAILS,
   ].join("\n");
 }
 

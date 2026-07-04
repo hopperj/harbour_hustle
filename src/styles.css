@@ -112,7 +112,8 @@ p {
   isolation: isolate;
   min-block-size: 100vh;
   padding: clamp(0.45rem, 1.4vw, 1rem);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .terminal-shell::before {
@@ -135,7 +136,15 @@ p {
 
 .status-grid {
   display: grid;
-  grid-template-columns: minmax(18rem, 1.7fr) repeat(11, minmax(6.5rem, 1fr));
+  grid-template-columns:
+    minmax(18rem, 1.9fr)
+    minmax(11rem, 1fr)
+    repeat(3, minmax(6.2rem, 0.62fr))
+    minmax(5.2rem, 0.5fr)
+    minmax(6.4rem, 0.58fr)
+    minmax(4.4rem, 0.42fr)
+    minmax(6.8rem, 0.68fr)
+    minmax(7.2rem, max-content);
   border: 1px solid var(--border);
   background: var(--panel-strong);
   box-shadow: 0 0 1.2rem rgba(49, 255, 37, 0.13);
@@ -145,12 +154,12 @@ p {
   display: grid;
   align-items: center;
   min-block-size: 3.75rem;
-  padding: 0.6rem 1rem;
+  padding: 0.5rem 0.55rem;
   border-inline-end: 1px solid var(--border-soft);
   white-space: nowrap;
   text-transform: uppercase;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .status-grid > div:last-child {
@@ -158,8 +167,7 @@ p {
 }
 
 .brand {
-  grid-column: span 2;
-  font-size: clamp(1.9rem, 3.4vw, 2.65rem);
+  font-size: clamp(1.7rem, 2.55vw, 2.05rem);
   font-weight: 900;
   line-height: 0.95;
   color: var(--text);
@@ -167,21 +175,38 @@ p {
 }
 
 .status-location {
-  grid-column: span 2;
+  min-inline-size: 0;
+}
+
+.status-stat {
+  align-content: center;
+  gap: 0.2rem;
+  line-height: 1.05;
+}
+
+.status-stat span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.status-stat strong {
+  font-size: 0.95rem;
+  font-weight: 800;
 }
 
 .status-action {
-  padding: 0.45rem 0.6rem;
+  padding: 0.45rem 0.5rem;
 }
 
 .status-new-game {
   inline-size: 100%;
+  min-inline-size: 6.2rem;
   min-block-size: 2.45rem;
 }
 
 .app-grid {
   display: grid;
-  grid-template-columns: minmax(18rem, 0.82fr) minmax(28rem, 1.6fr) minmax(18rem, 0.8fr);
+  grid-template-columns: minmax(16.2rem, 0.74fr) minmax(30rem, 1.76fr) minmax(16.2rem, 0.72fr);
   gap: 0;
   border-inline: 1px solid var(--border);
 }
@@ -330,7 +355,8 @@ p {
 }
 
 .dealer-selector,
-.hobo-selector {
+.hobo-selector,
+.merchant-selector {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
@@ -408,6 +434,12 @@ p {
 
 .dealer-line {
   margin-block-start: 0.65rem;
+}
+
+.interaction-status {
+  margin-block-end: 0;
+  color: var(--muted);
+  text-transform: uppercase;
 }
 
 .gift-only {
@@ -714,29 +746,56 @@ p {
 }
 
 .travel-row {
-  grid-template-columns: minmax(0, 1fr) 4rem 4rem 3.5rem;
-  column-gap: 0.35rem;
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 0.22rem;
   justify-content: stretch;
   inline-size: 100%;
   text-align: start;
-  place-items: center stretch;
+  place-items: stretch;
 }
 
-.travel-row span {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.travel-location-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-inline-size: 0;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.travel-current-label {
+  flex: 0 0 auto;
+  border: 1px solid var(--good);
+  padding: 0.08rem 0.3rem;
+  color: var(--good);
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.travel-location-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, max-content));
+  gap: 0.35rem 0.65rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.travel-location-stats span {
+  min-inline-size: 0;
   white-space: nowrap;
 }
 
-.travel-row span:first-child {
-  line-height: 1.15;
-  white-space: normal;
-}
-
 .travel-row.is-active {
-  background: var(--border);
-  color: #041004;
-  text-shadow: none;
+  border-color: var(--good);
+  background: rgba(182, 255, 82, 0.08);
+  box-shadow: inset 0.28rem 0 0 var(--good), inset 0 0 0.8rem rgba(182, 255, 82, 0.08);
+  color: var(--focus);
+  padding-inline-start: 1.05rem;
 }
 
 .travel-info {
@@ -775,16 +834,6 @@ p {
 
 .helper-hire p {
   color: var(--muted);
-}
-
-.prompt-panel {
-  border-color: var(--warn);
-  background: rgba(33, 24, 3, 0.95);
-}
-
-.prompt-panel p {
-  color: var(--warn);
-  margin-block-end: 0.85rem;
 }
 
 .prompt-actions {
@@ -891,6 +940,22 @@ p {
 .outcome-npc-line p {
   color: var(--warn);
   margin: 0;
+}
+
+.outcome-conversation {
+  display: grid;
+  border-block-start: 1px dashed var(--border-soft);
+  margin-block-start: 0.85rem;
+  padding-block-start: 0.85rem;
+}
+
+.outcome-conversation .conversation-log {
+  max-block-size: clamp(8rem, 24vh, 12rem);
+}
+
+.outcome-conversation .conversation-form {
+  margin-block-start: 0.65rem;
+  padding-block-start: 0.65rem;
 }
 
 .conversation-dialog {
@@ -1054,12 +1119,12 @@ p {
   }
 
   .app-grid {
-    grid-template-columns: minmax(18rem, 0.75fr) minmax(25rem, 1.25fr);
+    grid-template-columns: minmax(16.2rem, 0.68fr) minmax(27rem, 1.32fr);
   }
 
   .right-column {
     grid-column: 1 / -1;
-    grid-template-columns: minmax(18rem, 1fr) minmax(18rem, 0.7fr);
+    grid-template-columns: minmax(16.2rem, 1fr) minmax(16.2rem, 0.7fr);
     border-block-start: 1px solid var(--border);
   }
 }
@@ -1133,10 +1198,6 @@ p {
 
   .brand {
     font-size: 2rem;
-  }
-
-  .travel-row {
-    grid-template-columns: minmax(0, 1fr) 3rem 3.4rem 3rem;
   }
 
   .terminal-table th,

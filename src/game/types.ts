@@ -41,6 +41,15 @@ export interface GunConfig {
   damage: number;
 }
 
+export interface MerchantConfig {
+  id: string;
+  name: string;
+  locationId: string;
+  gunIds: string[];
+  markup: number;
+  bid: number;
+}
+
 export interface CopConfig {
   id: string;
   name: string;
@@ -166,6 +175,7 @@ export interface GameConfig {
   locations: LocationConfig[];
   drugs: DrugConfig[];
   guns: GunConfig[];
+  merchants: MerchantConfig[];
   cops: CopConfig[];
   dealers: DealerConfig[];
   hobos: HoboConfig[];
@@ -207,7 +217,15 @@ export interface MarketQuote {
   deal: DealType;
 }
 
+export interface MerchantQuote {
+  gunId: string;
+  price: number;
+  bidPrice: number;
+  deal: DealType;
+}
+
 export type DealerStock = Record<string, Record<string, number>>;
+export type MerchantMarket = Record<string, Record<string, MerchantQuote>>;
 
 export interface PriceHistoryEntry {
   turn: number;
@@ -234,7 +252,19 @@ export interface IntelReport {
   locationId: string;
   topic: IntelTopic;
   text: string;
+  details?: string[];
   accurate: boolean;
+}
+
+export type NpcMemoryKind = "chat" | "interaction" | "intel" | "violence" | "offer";
+
+export interface NpcMemoryEntry {
+  id: number;
+  turn: number;
+  date: string;
+  npcId: string;
+  kind: NpcMemoryKind;
+  text: string;
 }
 
 export type PendingPrompt =
@@ -280,12 +310,15 @@ export interface GameState {
   rngState: number;
   logIndex: number;
   market: MarketQuote[];
+  merchantMarket: MerchantMarket;
   priceHistory: Record<string, PriceHistoryEntry[]>;
   dealerStock: DealerStock;
+  dealerRobberyTurns: Record<string, number>;
   dealerRelationships: Record<string, number>;
   hoboRelationships: Record<string, number>;
   locationInfluence: Record<string, number>;
   intelReports: IntelReport[];
+  npcMemory: NpcMemoryEntry[];
   player: PlayerState;
   pendingPrompt: PendingPrompt | null;
   currentHelperPrice: number | null;
@@ -310,7 +343,8 @@ export type GameCommand =
   | { type: "deposit"; amount: number }
   | { type: "withdraw"; amount: number }
   | { type: "payLoan"; amount: number }
-  | { type: "buyGun"; gunId: string; amount: number }
-  | { type: "sellGun"; gunId: string; amount: number }
+  | { type: "buyGun"; gunId: string; amount: number; merchantId?: string }
+  | { type: "sellGun"; gunId: string; amount: number; merchantId?: string }
   | { type: "hireHelper"; amount: number }
+  | { type: "rememberNpc"; npcId: string; kind: NpcMemoryKind; text: string }
   | { type: "answerPrompt"; answer: "yes" | "no" | "run" | "fight" };

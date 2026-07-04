@@ -12,21 +12,40 @@ interface StatusBarProps {
 export function StatusBar({ config, state, onNewGame }: StatusBarProps) {
   const { player } = state;
   const location = config.locations.find((item) => item.id === player.locationId) ?? config.locations[0];
+  const repClass = player.reputation < 0 ? "money-bad" : player.reputation > 0 ? "money-good" : "";
+  const netClass = netWorth(player) >= 0 ? "money-good" : "money-bad";
 
   return (
     <header className="status-grid" aria-label="Game status">
       <div className="brand">HARBOUR HUSTLE</div>
       <div className="status-location">{location.name.toUpperCase()}</div>
-      <div className="money-good">CASH {formatMoney(config, player.cash)}</div>
-      <div className="money-bad">DEBT {formatMoney(config, player.debt)}</div>
-      <div>BANK {formatMoney(config, player.bank)}</div>
-      <div>HEALTH {player.health}</div>
-      <div>
-        SPACE {player.space}/{totalCapacity(config, player)}
+      <div className="status-stat money-good">
+        <span>CASH</span>
+        <strong>{formatMoney(config, player.cash)}</strong>
       </div>
-      <div className={player.reputation < 0 ? "money-bad" : player.reputation > 0 ? "money-good" : ""}>REP {player.reputation}</div>
-      <div className={netWorth(player) >= 0 ? "money-good" : "money-bad"}>
-        NET {formatMoney(config, netWorth(player))}
+      <div className="status-stat money-bad">
+        <span>DEBT</span>
+        <strong>{formatMoney(config, player.debt)}</strong>
+      </div>
+      <div className="status-stat">
+        <span>BANK</span>
+        <strong>{formatMoney(config, player.bank)}</strong>
+      </div>
+      <div className="status-stat">
+        <span>HEALTH</span>
+        <strong>{player.health}</strong>
+      </div>
+      <div className="status-stat">
+        <span>SPACE</span>
+        <strong>{player.space}/{totalCapacity(config, player)}</strong>
+      </div>
+      <div className={`status-stat ${repClass}`}>
+        <span>REP</span>
+        <strong>{player.reputation}</strong>
+      </div>
+      <div className={`status-stat ${netClass}`}>
+        <span>NET</span>
+        <strong>{formatMoney(config, netWorth(player))}</strong>
       </div>
       <div className="status-action">
         <TerminalButton className="status-new-game" tone="warn" onClick={onNewGame}>

@@ -1,5 +1,7 @@
 import { formatDate } from "../game/format";
-import type { EventLogEntry, PendingPrompt } from "../game/types";
+import type { EventLogEntry, GameConfig, NpcMemoryKind, PendingPrompt } from "../game/types";
+import type { OllamaAvailability } from "../game/llmDialogue";
+import { ConversationThread, type NpcConversationTarget } from "./ConversationOverlay";
 import { TerminalButton } from "./TerminalButton";
 
 export interface OutcomeAction {
@@ -13,13 +15,16 @@ export interface OutcomeAction {
 interface OutcomeOverlayProps {
   actions?: OutcomeAction[];
   canFight: boolean;
+  config: GameConfig;
+  conversationTarget?: NpcConversationTarget | null;
   entries: EventLogEntry[];
   id: string;
   npcDialogue?: string;
   npcName?: string;
+  ollamaStatus: OllamaAvailability;
   onAnswer: (answer: "yes" | "no" | "run" | "fight") => void;
-  onClose: () => void;
-  onTalk?: () => void;
+  onClose?: () => void;
+  onRemember: (npcId: string, kind: NpcMemoryKind, text: string) => void;
   prompt: PendingPrompt | null;
   title: string;
   tone: "info" | "good" | "warn" | "bad";
@@ -28,13 +33,16 @@ interface OutcomeOverlayProps {
 export function OutcomeOverlay({
   actions = [],
   canFight,
+  config,
+  conversationTarget,
   entries,
   id,
   npcDialogue,
   npcName,
+  ollamaStatus,
   onAnswer,
   onClose,
-  onTalk,
+  onRemember,
   prompt,
   title,
   tone,
@@ -52,12 +60,14 @@ export function OutcomeOverlay({
       >
         <div className="outcome-header">
           <div>
-            <p className="panel-caption">ACTION REPORT</p>
+            <p className="panel-caption">{prompt ? "ENCOUNTER" : "ACTION REPORT"}</p>
             <h2 id="outcome-title">{title}</h2>
           </div>
-          <TerminalButton className="outcome-close" onClick={onClose}>
-            CLOSE
-          </TerminalButton>
+          {onClose && (
+            <TerminalButton className="outcome-close" onClick={onClose}>
+              CLOSE
+            </TerminalButton>
+          )}
         </div>
 
         {entries.length > 0 ? (
@@ -69,19 +79,23 @@ export function OutcomeOverlay({
               </li>
             ))}
           </ol>
-        ) : (
+        ) : !prompt ? (
           <p className="is-empty">Nothing new happened.</p>
-        )}
+        ) : null}
 
-        {npcDialogue && npcName && (
+        {conversationTarget ? (
+          <div className="outcome-conversation">
+            <ConversationThread
+              config={config}
+              ollamaStatus={ollamaStatus}
+              onRemember={onRemember}
+              target={conversationTarget}
+            />
+          </div>
+        ) : npcDialogue && npcName && (
           <div className="outcome-npc-line">
             <div className="outcome-npc-header">
               <h3>{npcName.toUpperCase()}</h3>
-              {onTalk && (
-                <TerminalButton onClick={onTalk}>
-                  TALK
-                </TerminalButton>
-              )}
             </div>
             <p>{npcDialogue}</p>
           </div>
@@ -118,7 +132,7 @@ export function OutcomeOverlay({
 
         {actions.length > 0 && (
           <div className="outcome-followups">
-            <h3>KEEP TALKING</h3>
+            <h3>FOLLOW UP</h3>
             {prompt && <p>Handle the pending reply before pushing the conversation further.</p>}
             <div className="dialogue-options">
               {actions.map((action) => (

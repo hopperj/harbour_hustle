@@ -1,7 +1,7 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
-import { generateNpcDialogue, type OllamaAvailability } from "../game/llmDialogue";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { generateNpcDialogue, npcSceneRails, type OllamaAvailability } from "../game/llmDialogue";
 import { npcDocumentForId } from "../game/npcDocs";
-import type { GameConfig, Tone } from "../game/types";
+import type { GameConfig, NpcMemoryKind, Tone } from "../game/types";
 import { TerminalButton } from "./TerminalButton";
 
 export interface NpcConversationTarget {
@@ -25,6 +25,14 @@ interface ConversationOverlayProps {
   config: GameConfig;
   ollamaStatus: OllamaAvailability;
   onClose: () => void;
+  onRemember: (npcId: string, kind: NpcMemoryKind, text: string) => void;
+  target: NpcConversationTarget;
+}
+
+interface ConversationThreadProps {
+  config: GameConfig;
+  ollamaStatus: OllamaAvailability;
+  onRemember: (npcId: string, kind: NpcMemoryKind, text: string) => void;
   target: NpcConversationTarget;
 }
 
@@ -32,26 +40,26 @@ function fallbackConversationReply(target: NpcConversationTarget, playerLine: st
   const lowered = playerLine.toLowerCase();
 
   if (/(code|javascript|prompt|system|ollama|model|assistant|chatbot)/i.test(lowered)) {
-    return `${target.name} narrows their eyes. "I don't do machine talk, my guy. Keep it on the street or keep moving."`;
+    return `${target.name} narrows their eyes. "I don't do machine talk, my guy. Keep it on the fuckin' street or keep moving."`;
   }
 
   if (/(intel|info|tip|rumou?r|heard|know|police|cops|heat)/i.test(lowered)) {
     if (target.role.includes("intel")) {
-      return `${target.name} keeps it close. "Pay for the local tip if you want facts, eh. Free talk stays thin."`;
+      return `${target.name} keeps it close. "Pay for the local tip if you want facts, eh. Free talk stays thin as shit."`;
     }
 
-    return `${target.name} glances away. "I sell what I sell, bud. Street stories cost trust, and you ain't bought that yet."`;
+    return `${target.name} glances away. "I sell what I sell, bud. Street stories cost trust, and you ain't fuckin' bought that yet."`;
   }
 
   if (/(buy|sell|price|stock|deal)/i.test(lowered)) {
-    return `${target.name} taps the table. "Use the market if you're doing business, my guy. Talking doesn't move stock."`;
+    return `${target.name} taps the table. "Use the market if you're doing business, my guy. Talkin' doesn't move fuckin' stock."`;
   }
 
   if (/(rob|fight|threat|kill|hurt)/i.test(lowered)) {
-    return `${target.name} goes still. "Sorry, sorry, but say that again and this conversation gets ugly."`;
+    return `${target.name} goes still. "Fuck, shit, sorry, but say that again and this conversation gets ugly."`;
   }
 
-  return `${target.name} gives you a hard look. "Say it plain, eh. I'm listening, but I ain't giving the harbour away for free."`;
+  return `${target.name} gives you a hard look. "Say it plain, fuuuuckin' eh. I'm listening, but I ain't giving the harbour away for free."`;
 }
 
 function buildConversationScene(target: NpcConversationTarget, messages: ConversationMessage[], playerLine: string): string {
@@ -68,6 +76,7 @@ function buildConversationScene(target: NpcConversationTarget, messages: Convers
     "Conversation can provide flavor, attitude, small hints, refusals, or directions toward normal game actions.",
     "Conversation cannot directly change cash, inventory, prices, stock, health, relationships, reputation, time, or police state.",
     "Do not give free mechanical rewards. If the player wants a real trade, intel purchase, gift, threat, robbery, or travel action, point them to the game action in character.",
+    ...npcSceneRails("Answer the latest typed message while preserving the current relationship and recent history."),
     "",
     "Recent conversation:",
     transcript || "(none)",
@@ -78,11 +87,12 @@ function buildConversationScene(target: NpcConversationTarget, messages: Convers
   ].join("\n");
 }
 
-export function ConversationOverlay({ config, ollamaStatus, onClose, target }: ConversationOverlayProps) {
+export function ConversationThread({ config, ollamaStatus, onRemember, target }: ConversationThreadProps) {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const logRef = useRef<HTMLOListElement | null>(null);
   const nextIdRef = useRef(1);
   const llmAvailable = ollamaStatus === "available";
 
@@ -97,8 +107,21 @@ export function ConversationOverlay({ config, ollamaStatus, onClose, target }: C
     return () => abortRef.current?.abort();
   }, [target]);
 
+  useEffect(() => {
+    const log = logRef.current;
+    if (!log) {
+      return;
+    }
+
+    log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
+  }, [busy, messages]);
+
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    await sendDraft();
+  }
+
+  async function sendDraft(): Promise<void> {
     const playerLine = draft.trim();
     if (!playerLine || busy) {
       return;
@@ -107,12 +130,14 @@ export function ConversationOverlay({ config, ollamaStatus, onClose, target }: C
     const playerMessage: ConversationMessage = { id: nextIdRef.current++, speaker: "player", text: playerLine };
     const nextMessages = [...messages, playerMessage];
     setMessages(nextMessages);
+    onRemember(target.id, "chat", `Player said: ${playerLine}`);
     setDraft("");
 
     const fallback = fallbackConversationReply(target, playerLine);
     const npcDocument = npcDocumentForId(target.id);
     if (!llmAvailable || !npcDocument) {
       setMessages([...nextMessages, { id: nextIdRef.current++, speaker: "npc", text: fallback }]);
+      onRemember(target.id, "chat", `${target.name} said: ${fallback}`);
       return;
     }
 
@@ -132,11 +157,62 @@ export function ConversationOverlay({ config, ollamaStatus, onClose, target }: C
 
     if (!controller.signal.aborted) {
       setMessages((current) => [...current, { id: nextIdRef.current++, speaker: "npc", text: reply }]);
+      onRemember(target.id, "chat", `${target.name} said: ${reply}`);
       setBusy(false);
       abortRef.current = null;
     }
   }
 
+  function handleDraftKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    void sendDraft();
+  }
+
+  const inputId = `conversation-input-${target.id}`;
+
+  return (
+    <>
+      <ol className="conversation-log" aria-label={`${target.name} conversation log`} ref={logRef}>
+        {messages.map((message) => (
+          <li className={`conversation-message conversation-message--${message.speaker}`} key={message.id}>
+            <span>{message.speaker === "player" ? "YOU" : target.name.toUpperCase()}</span>
+            <p>{message.text}</p>
+          </li>
+        ))}
+        {messages.length === 0 && <li className="is-empty">The line is open.</li>}
+        {busy && (
+          <li className="conversation-message conversation-message--npc">
+            <span>{target.name.toUpperCase()}</span>
+            <p>...</p>
+          </li>
+        )}
+      </ol>
+
+      <form className="conversation-form" onSubmit={submit}>
+        <label htmlFor={inputId}>SAY SOMETHING</label>
+        <textarea
+          id={inputId}
+          rows={3}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleDraftKeyDown}
+          placeholder={`Talk to ${target.name}`}
+        />
+        <div className="conversation-actions">
+          <TerminalButton disabled={!draft.trim() || busy} tone="good" type="submit">
+            SAY
+          </TerminalButton>
+        </div>
+      </form>
+    </>
+  );
+}
+
+export function ConversationOverlay({ config, ollamaStatus, onClose, onRemember, target }: ConversationOverlayProps) {
   return (
     <div className="outcome-overlay" role="presentation">
       <section
@@ -155,37 +231,12 @@ export function ConversationOverlay({ config, ollamaStatus, onClose, target }: C
           </TerminalButton>
         </div>
 
-        <ol className="conversation-log" aria-label={`${target.name} conversation log`}>
-          {messages.map((message) => (
-            <li className={`conversation-message conversation-message--${message.speaker}`} key={message.id}>
-              <span>{message.speaker === "player" ? "YOU" : target.name.toUpperCase()}</span>
-              <p>{message.text}</p>
-            </li>
-          ))}
-          {messages.length === 0 && <li className="is-empty">The line is open.</li>}
-          {busy && (
-            <li className="conversation-message conversation-message--npc">
-              <span>{target.name.toUpperCase()}</span>
-              <p>...</p>
-            </li>
-          )}
-        </ol>
-
-        <form className="conversation-form" onSubmit={submit}>
-          <label htmlFor="conversation-input">SAY SOMETHING</label>
-          <textarea
-            id="conversation-input"
-            rows={3}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={`Talk to ${target.name}`}
-          />
-          <div className="conversation-actions">
-            <TerminalButton disabled={!draft.trim() || busy} tone="good" type="submit">
-              SAY
-            </TerminalButton>
-          </div>
-        </form>
+        <ConversationThread
+          config={config}
+          ollamaStatus={ollamaStatus}
+          onRemember={onRemember}
+          target={target}
+        />
       </section>
     </div>
   );

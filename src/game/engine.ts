@@ -14,6 +14,10 @@ import type {
   IntelTopic,
   LocationConfig,
   MarketQuote,
+  MerchantConfig,
+  MerchantMarket,
+  MerchantQuote,
+  NpcMemoryKind,
   PendingPrompt,
   PriceHistoryEntry,
   PlayerState,
@@ -89,6 +93,14 @@ function getGun(config: GameConfig, id: string): GunConfig {
   return gun;
 }
 
+function getMerchant(config: GameConfig, id: string): MerchantConfig {
+  const merchant = config.merchants.find((item) => item.id === id);
+  if (!merchant) {
+    throw new Error(`Unknown merchant: ${id}`);
+  }
+  return merchant;
+}
+
 function getCop(config: GameConfig, id: string): CopConfig {
   return config.cops.find((item) => item.id === id) ?? config.cops[0];
 }
@@ -121,8 +133,16 @@ function hobosForLocation(config: GameConfig, locationId: string): HoboConfig[] 
   return config.hobos.filter((hobo) => hobo.locationId === locationId);
 }
 
+export function merchantsForLocation(config: GameConfig, locationId: string): MerchantConfig[] {
+  return config.merchants.filter((merchant) => merchant.locationId === locationId);
+}
+
 function marketQuote(state: GameState, drugId: string): MarketQuote {
   return quoteFromMarket(state.market, drugId);
+}
+
+export function merchantQuote(state: GameState, merchantId: string, gunId: string): MerchantQuote | null {
+  return state.merchantMarket?.[merchantId]?.[gunId] ?? null;
 }
 
 function marketBidPrice(config: GameConfig, state: GameState, drug: DrugConfig): number {
@@ -155,6 +175,15 @@ function dealerCanTrade(config: GameConfig, state: GameState, dealer: DealerConf
   return dealer.locationId === state.player.locationId &&
     dealer.drugIds.includes(drugId) &&
     dealerRelationship(state, dealer.id) >= dealerRefusalThreshold(dealer, state);
+}
+
+function merchantForTrade(config: GameConfig, state: GameState, merchantId: string | undefined): MerchantConfig | null {
+  if (merchantId) {
+    const merchant = getMerchant(config, merchantId);
+    return merchant.locationId === state.player.locationId ? merchant : null;
+  }
+
+  return merchantsForLocation(config, state.player.locationId)[0] ?? null;
 }
 
 function quoteFromMarket(market: MarketQuote[], drugId: string): MarketQuote {
@@ -238,7 +267,7 @@ function withSwearing(state: GameState, text: string, chance = 35, strong = fals
   }
 
   if (strong) {
-    const fragments = ["this is bullshit, ", "for fuck's sake, ", "this is fucked, "];
+    const fragments = ["this is bullshit, ", "for fuck's sake, ", "this is fucked, ", "fuck, shit, sorry, "];
     const fragment = fragments[textRoll(state, text, 53) % fragments.length];
     if (/^Sorry, sorry, sorry, /i.test(text)) {
       return text.replace(/^Sorry, sorry, sorry, /i, `Sorry, sorry, sorry, ${fragment}`);
@@ -246,7 +275,7 @@ function withSwearing(state: GameState, text: string, chance = 35, strong = fals
     return `${fragment.charAt(0).toUpperCase()}${fragment.slice(1)}${text.charAt(0).toLowerCase()}${text.slice(1)}`;
   }
 
-  const words = ["damn", "shit", "hell"];
+  const words = ["damn", "shit", "hell", "fuckin'", "fuuuuckin' eh"];
   const word = words[textRoll(state, text, 59) % words.length];
   if (/[?!.]$/.test(text)) {
     return `${text.slice(0, -1)}, ${word}${text.slice(-1)}`;
@@ -282,6 +311,29 @@ function makeDealerStock(config: GameConfig): DealerStock {
     config.dealers.map((dealer) => [
       dealer.id,
       Object.fromEntries(dealer.drugIds.map((drugId) => [drugId, 0])),
+    ]),
+  );
+}
+
+function makeDealerRobberyTurns(config: GameConfig): Record<string, number> {
+  return Object.fromEntries(config.dealers.map((dealer) => [dealer.id, 0]));
+}
+
+function makeMerchantMarket(config: GameConfig): MerchantMarket {
+  return Object.fromEntries(
+    config.merchants.map((merchant) => [
+      merchant.id,
+      Object.fromEntries(
+        config.guns.map((gun) => [
+          gun.id,
+          {
+            gunId: gun.id,
+            price: gun.price,
+            bidPrice: Math.max(1, Math.floor((gun.price * merchant.bid) / 100)),
+            deal: "normal",
+          },
+        ]),
+      ),
     ]),
   );
 }
@@ -334,6 +386,13 @@ function normalizeSavedLocationIds(config: GameConfig, state: GameState): void {
       text: migrateLegacyText(entry.text),
     }));
   }
+
+  if (state.npcMemory) {
+    state.npcMemory = state.npcMemory.map((entry) => ({
+      ...entry,
+      text: migrateLegacyText(entry.text),
+    }));
+  }
 }
 
 function ensureStreetState(config: GameConfig, state: GameState): void {
@@ -350,6 +409,24 @@ function ensureStreetState(config: GameConfig, state: GameState): void {
     }
   }
 
+  state.dealerRobberyTurns ??= makeDealerRobberyTurns(config);
+  for (const dealer of config.dealers) {
+    state.dealerRobberyTurns[dealer.id] ??= 0;
+  }
+
+  state.merchantMarket ??= makeMerchantMarket(config);
+  for (const merchant of config.merchants) {
+    state.merchantMarket[merchant.id] ??= {};
+    for (const gun of config.guns) {
+      state.merchantMarket[merchant.id][gun.id] ??= {
+        gunId: gun.id,
+        price: gun.price,
+        bidPrice: Math.max(1, Math.floor((gun.price * merchant.bid) / 100)),
+        deal: "normal",
+      };
+    }
+  }
+
   state.hoboRelationships ??= makeHoboRelationships(config);
   for (const hobo of config.hobos) {
     state.hoboRelationships[hobo.id] ??= 0;
@@ -361,6 +438,7 @@ function ensureStreetState(config: GameConfig, state: GameState): void {
   }
 
   state.intelReports ??= [];
+  state.npcMemory ??= [];
   state.player.reputation ??= 0;
   state.player.guns ??= {};
   for (const gun of config.guns) {
@@ -593,9 +671,13 @@ export function hydrateGameState(config: GameConfig, state: GameState): GameStat
   const next = cloneState(state);
   normalizeSavedLocationIds(config, next);
   const needsDealerStockRoll = !next.dealerStock;
+  const needsMerchantMarketRoll = !next.merchantMarket;
   ensureDealerState(config, next);
   if (needsDealerStockRoll && next.market?.length > 0) {
     rollDealerStock(config, next);
+  }
+  if (needsMerchantMarketRoll) {
+    rollMerchantMarket(config, next);
   }
   backfillHistoricalPriceHistory(config, next, state.rngState);
   return next;
@@ -705,17 +787,16 @@ function hoserMarketIntelText(
   if (accurate) {
     if (quote.price > 0) {
       return pickFlavorLine(state, `${hobo.id}-${drug.id}-market-hot`, [
-        `${hobo.name} says ${drug.name} is movin' here for ${formatMoney(config, quote.price)}, bud.`,
-        `${hobo.name} heard ${drug.name} is goin' for ${formatMoney(config, quote.price)} around here, eh.`,
-        `${hobo.name} says ${drug.name} is hotter than a Tims lineup at ${formatMoney(config, quote.price)}, my guy.`,
+        `${hobo.name} says quiet buyers are circling ${drug.name} harder than the board says, bud.`,
+        `${hobo.name} heard ${drug.name} is moving through side pockets before it hits the table, eh.`,
+        `${hobo.name} says ${drug.name} has buyers waiting after dark, my guy.`,
       ]);
     }
 
-    const bid = formatMoney(config, marketBidPrice(config, state, drug));
     return pickFlavorLine(state, `${hobo.id}-${drug.id}-market-dry`, [
-      `${hobo.name} says ${drug.name} is dry as a winter boot here, but buyers are still sniffin' around ${bid}.`,
-      `${hobo.name} heard nobody's got ${drug.name} on hand, but folks'll still toss about ${bid} at it.`,
-      `${hobo.name} says ${drug.name} stock is gone for a rip, but bids are hangin' near ${bid}.`,
+      `${hobo.name} says ${drug.name} is dry as a winter boot, but buyers are still asking around.`,
+      `${hobo.name} heard nobody's showing ${drug.name} openly, but the demand hasn't gone home.`,
+      `${hobo.name} says ${drug.name} stock is hiding, not dead.`,
     ]);
   }
 
@@ -738,9 +819,9 @@ function hoserDealerIntelText(
   const dealerName = dealerDisplayName(config, dealer);
   if (accurate) {
     return pickFlavorLine(state, `${hobo.id}-${dealer.id}-dealer-true`, [
-      `${hobo.name} says ${dealerName}'s ${dealer.traits.join("/")} and cuts folks off around relationship ${threshold}, eh.`,
-      `${hobo.name} heard ${dealerName}'s runnin' ${dealer.traits.join("/")} and won't deal once you slide past ${threshold}.`,
-      `${hobo.name} says ${dealerName}'s got a ${dealer.traits.join("/")} streak and a short fuse near ${threshold}, my guy.`,
+      `${hobo.name} says ${dealerName} remembers who wastes time and who brings clean gifts, eh.`,
+      `${hobo.name} heard ${dealerName} keeps one ear on robbery talk before prices even come up.`,
+      `${hobo.name} says ${dealerName} opens up faster when business starts respectful, my guy.`,
     ]);
   }
 
@@ -761,9 +842,9 @@ function hoserPoliceIntelText(
 ): string {
   if (accurate) {
     return pickFlavorLine(state, `${hobo.id}-${location.id}-police-true`, [
-      `${hobo.name} says the cops in ${location.name} are sittin' ${riskLabel(presence)} at ${presence}%, sorry and nosy as hell.`,
-      `${hobo.name} heard ${location.name} is ${riskLabel(presence)} heat, about ${presence}%, eh.`,
-      `${hobo.name} says police pressure in ${location.name} is ${riskLabel(presence)} at ${presence}%. Lotta sorry badges sniffin' around, my guy.`,
+      `${hobo.name} says plainclothes have been watching handoffs around ${location.name}, sorry and nosy as hell.`,
+      `${hobo.name} heard ${location.name} has patrols checking faces after messy deals, eh.`,
+      `${hobo.name} says the badges in ${location.name} are listening for loud moves, my guy.`,
     ]);
   }
 
@@ -783,9 +864,9 @@ function hoserTurfIntelText(
 ): string {
   if (accurate) {
     return pickFlavorLine(state, `${hobo.id}-${location.id}-turf-true`, [
-      `${hobo.name} says your turf in ${location.name} is ${influenceLabel(influence)} (${influence}), bud.`,
-      `${hobo.name} heard your name in ${location.name} is sittin' ${influenceLabel(influence)} at ${influence}, eh.`,
-      `${hobo.name} says ${location.name} has you pegged ${influenceLabel(influence)} (${influence}). Keep your boots dry, my guy.`,
+      `${hobo.name} says your name is travelling through ${location.name} faster than your feet, bud.`,
+      `${hobo.name} heard ${location.name} remembers who pays, who threatens, and who runs, eh.`,
+      `${hobo.name} says ${location.name} is keeping score even when nobody says it out loud, my guy.`,
     ]);
   }
 
@@ -805,11 +886,10 @@ function hoserOpportunityIntelText(
 ): string {
   const dealerName = dealerDisplayName(config, dealer);
   if (accurate) {
-    const danger = dealer.toughness + dealer.guardCount * 24 + Math.floor(dealer.violence / 2);
     return pickFlavorLine(state, `${hobo.id}-${dealer.id}-opportunity-true`, [
-      `${hobo.name} says ${dealerName} has fat pockets (${dealer.greed}) but danger's ${riskLabel(danger)}, bud.`,
-      `${hobo.name} heard ${dealerName}'s sittin' cash-rich (${dealer.greed}), but the danger reads ${riskLabel(danger)}, eh.`,
-      `${hobo.name} says ${dealerName}'s got enough cash to sink a dory (${dealer.greed}), but danger's ${riskLabel(danger)}, my guy.`,
+      `${hobo.name} says ${dealerName}'s cash box sounded heavier than usual, but somebody was watching the door, bud.`,
+      `${hobo.name} heard ${dealerName} had a rich morning and a nervous lookout, eh.`,
+      `${hobo.name} says ${dealerName}'s carrying enough to tempt a fool, but the room isn't empty, my guy.`,
     ]);
   }
 
@@ -832,17 +912,16 @@ function rhymeMarketIntelText(
   if (accurate) {
     if (quote.price > 0) {
       return pickFlavorLine(state, `${hobo.id}-${drug.id}-rhyme-market-hot`, [
-        `${hobo.name} bows low: "${drug.name} rings at ${formatMoney(config, quote.price)} on the street; move with the tune or miss the beat."`,
-        `${hobo.name} sings: "${drug.name} hums at ${formatMoney(config, quote.price)} tonight; step soft in the harbour light."`,
-        `${hobo.name} says: "${drug.name} plays at ${formatMoney(config, quote.price)} in town; buy on the upbeat or ride it down."`,
+        `${hobo.name} bows low: "${drug.name} hums behind the street; side-door buyers tap the beat."`,
+        `${hobo.name} sings: "${drug.name} moves before the light; step soft in the harbour night."`,
+        `${hobo.name} says: "${drug.name} has whispers under town; hear the tune before it drowns."`,
       ]);
     }
 
-    const bid = formatMoney(config, marketBidPrice(config, state, drug));
     return pickFlavorLine(state, `${hobo.id}-${drug.id}-rhyme-market-dry`, [
-      `${hobo.name} sings: "${drug.name} is gone, no hand has a share; buyers still whisper ${bid} in the air."`,
-      `${hobo.name} bows: "${drug.name} went quiet, no stock in sight; bids hum near ${bid} through the night."`,
-      `${hobo.name} says: "${drug.name} is missing from every lane; buyers still murmur ${bid} in the rain."`,
+      `${hobo.name} sings: "${drug.name} is gone from every stare; buyers still whisper through the air."`,
+      `${hobo.name} bows: "${drug.name} went quiet, no stock in sight; hunger still hums through the night."`,
+      `${hobo.name} says: "${drug.name} is missing from the lane; demand still knocks against the rain."`,
     ]);
   }
 
@@ -865,9 +944,9 @@ function rhymeDealerIntelText(
   const dealerName = dealerDisplayName(config, dealer);
   if (accurate) {
     return pickFlavorLine(state, `${hobo.id}-${dealer.id}-rhyme-dealer-true`, [
-      `${hobo.name} sings: "${dealerName} runs ${dealer.traits.join("/")} nearby; cross ${threshold}, and the door goes dry."`,
-      `${hobo.name} bows: "${dealerName} keeps ${dealer.traits.join("/")} in the eye; sink past ${threshold}, and trust says bye."`,
-      `${hobo.name} says: "${dealerName}'s line is ${dealer.traits.join("/")} and sly; fall below ${threshold}, and trades won't fly."`,
+      `${hobo.name} sings: "${dealerName} hears who pays and who lies; clean gifts open cleaner eyes."`,
+      `${hobo.name} bows: "${dealerName} weighs respect before reply; ugly talk makes trust run dry."`,
+      `${hobo.name} says: "${dealerName}'s door has a careful eye; bring calm business or pass by."`,
     ]);
   }
 
@@ -888,9 +967,9 @@ function rhymePoliceIntelText(
 ): string {
   if (accurate) {
     return pickFlavorLine(state, `${hobo.id}-${location.id}-rhyme-police-true`, [
-      `${hobo.name} sings: "${location.name} has ${presence}% heat tonight; sorry badges glow under harbour light."`,
-      `${hobo.name} bows: "${location.name} reads ${riskLabel(presence)} in the lane; ${presence}% heat taps glass like rain."`,
-      `${hobo.name} says: "${location.name} runs ${riskLabel(presence)} where the cruisers veer; ${presence}% pressure, keep your fiddle ear clear."`,
+      `${hobo.name} sings: "${location.name} has quiet eyes tonight; sorry badges lean outside the light."`,
+      `${hobo.name} bows: "${location.name} hears the cruisers steer; keep your fiddle ear clear."`,
+      `${hobo.name} says: "${location.name} has badges dressed as air; step too loud and they are there."`,
     ]);
   }
 
@@ -910,9 +989,9 @@ function rhymeTurfIntelText(
 ): string {
   if (accurate) {
     return pickFlavorLine(state, `${hobo.id}-${location.id}-rhyme-turf-true`, [
-      `${hobo.name} sings: "Your turf in ${location.name} is ${influenceLabel(influence)} at ${influence}, clear; keep your ear low, the pavement can hear."`,
-      `${hobo.name} bows: "${location.name} marks you ${influenceLabel(influence)} at ${influence} near; the street keeps score where the footsteps steer."`,
-      `${hobo.name} says: "${location.name} calls you ${influenceLabel(influence)}, ${influence} in the air; play soft or the block will stare."`,
+      `${hobo.name} sings: "${location.name} knows the shape of your name; every gift and threat feeds the flame."`,
+      `${hobo.name} bows: "${location.name} keeps score where footsteps steer; debts and favors gather near."`,
+      `${hobo.name} says: "${location.name} hums when you appear; play soft or the block will hear."`,
     ]);
   }
 
@@ -932,11 +1011,10 @@ function rhymeOpportunityIntelText(
 ): string {
   const dealerName = dealerDisplayName(config, dealer);
   if (accurate) {
-    const danger = dealer.toughness + dealer.guardCount * 24 + Math.floor(dealer.violence / 2);
     return pickFlavorLine(state, `${hobo.id}-${dealer.id}-rhyme-opportunity-true`, [
-      `${hobo.name} sings: "${dealerName} keeps greed ${dealer.greed} in the till; danger reads ${riskLabel(danger)} on the hill."`,
-      `${hobo.name} bows: "${dealerName}'s cash rings heavy and still; but ${riskLabel(danger)} danger waits by the sill."`,
-      `${hobo.name} says: "${dealerName} has money enough for a thrill; the danger says ${riskLabel(danger)}, so test your will."`,
+      `${hobo.name} sings: "${dealerName}'s cash rings heavy and still; but a watcher waits by the sill."`,
+      `${hobo.name} bows: "${dealerName} had a rich little run; perfect targets hide more than one."`,
+      `${hobo.name} says: "${dealerName} tempts a hungry will; count the shadows before the till."`,
     ]);
   }
 
@@ -955,18 +1033,26 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
   [state.rngState, accuracyRoll] = randomInt(state.rngState, 0, 100);
   const accurate = accuracyRoll < intelAccuracyChance(state, hobo, accuracyModifier);
   let text = "";
+  let details: string[] = [];
 
   if (topic === "market") {
     const drug = randomChoice(state, config.drugs);
     const quote = marketQuote(state, drug.id);
+    details = [
+      `Topic: market movement for ${drug.name}.`,
+      quote.price > 0
+        ? `${drug.name} has current street stock, but the useful intel is about hidden demand outside the posted table.`
+        : `${drug.name} is currently dry here, but the useful intel is that quiet demand still exists.`,
+      accurate ? "Reliability: likely accurate." : "Reliability: shaky or possibly wrong.",
+    ];
     if (hobo.dialogStyle === "hoser") {
       text = hoserMarketIntelText(config, state, hobo, drug, quote, accurate);
     } else if (hobo.dialogStyle === "rhyme") {
       text = rhymeMarketIntelText(config, state, hobo, drug, quote, accurate);
     } else if (accurate) {
       text = quote.price > 0
-        ? `${hobo.name} says ${drug.name} is moving here at ${formatMoney(config, quote.price)}.`
-        : `${hobo.name} says ${drug.name} has no street stock here, but buyers still bid near ${formatMoney(config, marketBidPrice(config, state, drug))}.`;
+        ? `${hobo.name} says ${drug.name} has buyers circling outside the posted trade.`
+        : `${hobo.name} says ${drug.name} is dry here, but quiet demand is still alive.`;
     } else {
       const location = randomChoice(state, config.locations);
       text = `${hobo.name} swears ${drug.name} is about to get hot in ${location.name}, but the story sounds shaky.`;
@@ -975,18 +1061,34 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
     const localDealers = dealersForLocation(config, state.player.locationId);
     const dealer = randomChoice(state, localDealers.length > 0 ? localDealers : config.dealers);
     const dealerName = dealerDisplayName(config, dealer);
+    details = [
+      `Topic: behavior around ${dealerName}.`,
+      accurate
+        ? `${dealerName} reacts strongly to respect, gifts, threats, robbery talk, and wasted time.`
+        : `The claim that ${dealerName} is easy to push around is unreliable.`,
+      "Do not reveal exact relationship thresholds or UI-visible relationship numbers.",
+      accurate ? "Reliability: likely accurate." : "Reliability: shaky or possibly wrong.",
+    ];
     if (hobo.dialogStyle === "hoser") {
       text = hoserDealerIntelText(config, state, hobo, dealer, dealerRefusalThreshold(dealer, state), accurate);
     } else if (hobo.dialogStyle === "rhyme") {
       text = rhymeDealerIntelText(config, state, hobo, dealer, dealerRefusalThreshold(dealer, state), accurate);
     } else if (accurate) {
-      text = `${hobo.name} says ${dealerName} is ${dealer.traits.join("/")} and cuts people off near relationship ${dealerRefusalThreshold(dealer, state)}.`;
+      text = `${hobo.name} says ${dealerName} remembers clean gifts, ugly threats, and who starts trouble.`;
     } else {
       text = `${hobo.name} says ${dealerName} looks easy to push around. That read feels thin.`;
     }
   } else if (topic === "police") {
     const location = randomChoice(state, config.locations);
     const presence = effectivePolicePresence(config, state, location);
+    details = [
+      `Topic: police behavior in ${location.name}.`,
+      accurate
+        ? `Plainclothes or patrols have been watching handoffs and loud moves around ${location.name}.`
+        : `The claim that police have cleared out of ${location.name} is unreliable.`,
+      "Do not reveal exact police percentages or UI-visible risk labels.",
+      accurate ? "Reliability: likely accurate." : "Reliability: shaky or possibly wrong.",
+    ];
     if (hobo.dialogStyle === "hoser") {
       if (accurate) {
         text = hoserPoliceIntelText(state, hobo, location, accurate, presence);
@@ -1002,33 +1104,47 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
         text = rhymePoliceIntelText(state, hobo, location, accurate, presence, fakeRisk);
       }
     } else if (accurate) {
-      text = `${hobo.name} says police pressure in ${location.name} is ${riskLabel(presence)} at ${presence}%.`;
+      text = `${hobo.name} says plainclothes have been watching handoffs around ${location.name}.`;
     } else {
-      const fakeRisk = randomChoice(state, ["LOW", "MED", "HIGH"]);
-      text = `${hobo.name} claims police pressure in ${location.name} is ${fakeRisk}, but keeps changing details.`;
+      text = `${hobo.name} claims the badges cleared out of ${location.name}, but keeps changing details.`;
     }
   } else if (topic === "turf") {
     const location = getLocation(config, state.player.locationId);
     const influence = locationInfluence(state, location.id);
+    details = [
+      `Topic: street memory in ${location.name}.`,
+      accurate
+        ? `${location.name} is keeping track of the player's gifts, threats, robberies, and debts.`
+        : `The claim that everyone in ${location.name} is on the player's side is unreliable.`,
+      "Do not reveal exact turf scores or UI-visible reputation numbers.",
+      accurate ? "Reliability: likely accurate." : "Reliability: shaky or possibly wrong.",
+    ];
     if (hobo.dialogStyle === "hoser") {
       text = hoserTurfIntelText(state, hobo, location, influence, accurate);
     } else if (hobo.dialogStyle === "rhyme") {
       text = rhymeTurfIntelText(state, hobo, location, influence, accurate);
     } else if (accurate) {
-      text = `${hobo.name} says your turf in ${location.name} is ${influenceLabel(influence)} (${influence}).`;
+      text = `${hobo.name} says ${location.name} is keeping score on your gifts, threats, and debts.`;
     } else {
       text = `${hobo.name} says everyone in ${location.name} is on your side. The street does not quite agree.`;
     }
   } else {
     const dealer = randomChoice(state, config.dealers);
     const dealerName = dealerDisplayName(config, dealer);
+    details = [
+      `Topic: robbery opportunity around ${dealerName}.`,
+      accurate
+        ? `${dealerName}'s cash box may be heavier than usual, but the room is not empty and somebody may be watching.`
+        : `The claim that ${dealerName} has easy money and no backup is unreliable.`,
+      "Do not reveal exact greed, toughness, guard, or danger numbers.",
+      accurate ? "Reliability: likely accurate." : "Reliability: shaky or possibly wrong.",
+    ];
     if (hobo.dialogStyle === "hoser") {
       text = hoserOpportunityIntelText(config, state, hobo, dealer, accurate);
     } else if (hobo.dialogStyle === "rhyme") {
       text = rhymeOpportunityIntelText(config, state, hobo, dealer, accurate);
     } else if (accurate) {
-      const danger = dealer.toughness + dealer.guardCount * 24 + Math.floor(dealer.violence / 2);
-      text = `${hobo.name} says ${dealerName} is cash-rich (${dealer.greed}) but danger ${riskLabel(danger)}.`;
+      text = `${hobo.name} says ${dealerName}'s cash box sounded heavy, but the room was not empty.`;
     } else {
       text = `${hobo.name} says ${dealerName} is carrying easy money and no backup. It sounds too clean.`;
     }
@@ -1042,7 +1158,8 @@ function createIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
     sourceName: hobo.name,
     locationId: hobo.locationId,
     topic,
-    text: formatIntelSummary(hobo, hobo.dialogStyle === "rhyme" ? text : withEh(state, withSwearing(state, text, 38), 72)),
+    text: `Intel from ${hobo.name}: ${details.join(" ")}`,
+    details,
     accurate,
   };
 }
@@ -1052,6 +1169,7 @@ function recordIntelReport(config: GameConfig, state: GameState, hobo: HoboConfi
   state.intelReports.unshift(report);
   state.intelReports = state.intelReports.slice(0, 12);
   pushLog(state, report.accurate ? "info" : "warn", report.text);
+  rememberNpc(state, hobo.id, "intel", report.text);
 }
 
 function makeInitialPlayer(config: GameConfig): PlayerState {
@@ -1216,11 +1334,37 @@ function rollDealerStock(config: GameConfig, state: GameState): void {
   }
 }
 
+function rollMerchantMarket(config: GameConfig, state: GameState): void {
+  state.merchantMarket = makeMerchantMarket(config);
+
+  for (const merchant of config.merchants) {
+    for (const gun of config.guns) {
+      const basePrice = Math.max(1, Math.floor((gun.price * merchant.markup) / 100));
+      const low = Math.max(1, Math.floor(basePrice * 0.6));
+      const high = Math.max(low + 1, Math.ceil(basePrice * 1.65));
+      let price = basePrice;
+      [state.rngState, price] = randomPrice(state.rngState, low, high);
+      const deal: MerchantQuote["deal"] =
+        price <= Math.floor(basePrice * 0.78) ? "cheap" :
+        price >= Math.ceil(basePrice * 1.32) ? "expensive" :
+        "normal";
+
+      state.merchantMarket[merchant.id][gun.id] = {
+        gunId: gun.id,
+        price,
+        bidPrice: Math.max(1, Math.floor((price * merchant.bid) / 100)),
+        deal,
+      };
+    }
+  }
+}
+
 function rollMarket(config: GameConfig, state: GameState): string[] {
   const result = generateMarket(config, state.player.locationId, state.rngState);
   state.rngState = result.seed;
   state.market = result.market;
   rollDealerStock(config, state);
+  rollMerchantMarket(config, state);
   recordPriceHistory(config, state);
   return result.messages;
 }
@@ -1265,6 +1409,20 @@ function maybeDealerApproachOffer(config: GameConfig, state: GameState, dealer: 
     acceptMessage: offer.acceptMessage,
     declineMessage: offer.declineMessage,
     poorMessage: offer.poorMessage,
+  });
+  rememberNpc(state, dealer.id, "offer", `${dealer.name} made a side offer: ${renderDealerOfferText(config, state, dealer, offer.prompt, price)}`);
+}
+
+function rememberNpc(state: GameState, npcId: string, kind: NpcMemoryKind, text: string): void {
+  state.npcMemory ??= [];
+  state.logIndex += 1;
+  state.npcMemory.push({
+    id: state.logIndex,
+    turn: state.player.turn,
+    date: state.player.date,
+    npcId,
+    kind,
+    text,
   });
 }
 
@@ -1553,8 +1711,9 @@ function serviceLog(config: GameConfig, state: GameState): void {
   if (locationId === config.serviceLocations.bank) {
     pushLog(state, "info", `${config.names.bank} is open.`);
   }
-  if (locationId === config.serviceLocations.gunShop) {
-    pushLog(state, "info", `${config.names.gunShop} is open for business.`);
+  const localMerchants = merchantsForLocation(config, locationId);
+  if (localMerchants.length > 0) {
+    pushLog(state, "info", `${localMerchants.map((merchant) => merchant.name).join(", ")} ${localMerchants.length === 1 ? "is" : "are"} open for trade.`);
   }
   if (locationId === config.serviceLocations.roughPub) {
     pushLog(state, "info", `You can hire ${config.names.helperPlural} at ${config.names.roughPub}.`);
@@ -1807,7 +1966,8 @@ function resolveDealerRobbery(config: GameConfig, state: GameState, dealer: Deal
   setDealerRelationship(state, dealer.id, -100);
   adjustReputation(state, -10 - Math.floor(dealer.connected / 25));
   adjustLocationInfluence(state, dealer.locationId, -10 - Math.floor(dealer.violence / 15));
-  pushLog(state, "bad", withEh(state, withViolentSorry(state, `You try to rob ${dealer.name}.`), 45));
+  pushLog(state, "bad", `You tried to rob ${dealer.name}.`);
+  rememberNpc(state, dealer.id, "violence", `Player tried to rob ${dealer.name}.`);
 
   const fearBonus = Math.floor(Math.max(0, -(state.player.reputation ?? 0)) / 2);
   const playerAttack = 55 + config.guns.reduce((sum, gun) => sum + gun.damage * state.player.guns[gun.id].carried * 8, 0) + state.player.helpers * 2 + fearBonus;
@@ -1819,6 +1979,7 @@ function resolveDealerRobbery(config: GameConfig, state: GameState, dealer: Deal
   [state.rngState, defendRoll] = randomInt(state.rngState, 0, Math.max(1, dealerDefense));
 
   if (attackRoll > defendRoll) {
+    state.dealerRobberyTurns[dealer.id] = state.player.turn;
     const stash = dealerStashFromStock(config, state, dealer);
     const transfer = transferDealerStashToPlayer(state, stash);
     clearDealerStashStock(state, dealer.id, stash);
@@ -1829,33 +1990,17 @@ function resolveDealerRobbery(config: GameConfig, state: GameState, dealer: Deal
       pushLog(
         state,
         "good",
-        withEh(
-          state,
-          withViolentSorry(
-            state,
-            `You shook down ${dealer.name} for ${formatMoney(config, cashLoot)} cash from ${formatMoney(config, transfer.totalValue)} of stash.`,
-            84,
-          ),
-          55,
-        ),
+        `You stole ${formatMoney(config, cashLoot)} cash from ${dealer.name}. Stash value found: ${formatMoney(config, transfer.totalValue)}.`,
       );
     } else {
-      pushLog(state, "warn", withEh(state, withSwearing(state, `${dealer.name}'s stash was empty, and the cash box was dead too.`, 45), 55));
+      pushLog(state, "warn", `${dealer.name}'s stash and cash box were empty.`);
     }
 
     if (transfer.taken.length > 0) {
       pushLog(
         state,
         "good",
-        withEh(
-          state,
-          withSwearing(
-            state,
-            `You grabbed ${formatDrugLoot(transfer.taken)} worth ${formatMoney(config, transfer.takenValue)}.`,
-            35,
-          ),
-          45,
-        ),
+        `You stole ${formatDrugLoot(transfer.taken)} worth ${formatMoney(config, transfer.takenValue)}.`,
       );
     }
 
@@ -1863,9 +2008,17 @@ function resolveDealerRobbery(config: GameConfig, state: GameState, dealer: Deal
       pushLog(
         state,
         "warn",
-        withEh(state, `You left ${formatMoney(config, transfer.leftValue)} of ${dealer.name}'s stash behind because you could not carry it.`, 55),
+        `You left ${formatMoney(config, transfer.leftValue)} of ${dealer.name}'s stash behind because you could not carry it.`,
       );
     }
+    rememberNpc(
+      state,
+      dealer.id,
+      "violence",
+      transfer.totalValue > 0
+        ? `Robbery succeeded: player took ${formatMoney(config, cashLoot)} cash and ${formatMoney(config, transfer.takenValue)} of stash from ${dealer.name}.`
+        : `Robbery succeeded but ${dealer.name}'s stash and cash box were empty.`,
+    );
     maybeDealerRetaliation(config, state, dealer);
     return;
   }
@@ -1879,7 +2032,8 @@ function resolveDealerRobbery(config: GameConfig, state: GameState, dealer: Deal
     damage += hit;
   }
   damage = Math.max(1, Math.floor((damage * 100) / config.playerArmor));
-  pushLog(state, "bad", withEh(state, withViolentSorry(state, `${dealer.name} fights back with a ${dealerGun.name}.`), 65));
+  pushLog(state, "bad", `${dealer.name} fought back with a ${dealerGun.name}.`);
+  rememberNpc(state, dealer.id, "violence", `Robbery failed: ${dealer.name} fought back with a ${dealerGun.name} and hurt the player.`);
   damagePlayer(config, state, damage);
   maybeDoctor(config, state);
   maybeDealerRetaliation(config, state, dealer);
@@ -1891,6 +2045,7 @@ function resolveHoboThreat(config: GameConfig, state: GameState, hobo: HoboConfi
   adjustReputation(state, -4);
   adjustLocationInfluence(state, hobo.locationId, -6);
   pushLog(state, "bad", withEh(state, withViolentSorry(state, `You threaten ${hobo.name}.`), 45));
+  rememberNpc(state, hobo.id, "violence", `Player threatened ${hobo.name} for information.`);
 
   const fear = Math.max(0, -(state.player.reputation ?? 0));
   const fearThresholdBonus = (state.player.reputation ?? 0) <= hobo.fearThreshold ? 12 : 0;
@@ -1902,11 +2057,8 @@ function resolveHoboThreat(config: GameConfig, state: GameState, hobo: HoboConfi
   [state.rngState, resistRoll] = randomInt(state.rngState, 0, Math.max(1, resistance));
 
   if (threatRoll > resistRoll) {
-    if (hobo.dialogStyle === "rhyme") {
-      pushLog(state, "warn", `${hobo.name} bows sharp: "Keep your hands still and your voice low; I'll give you a song, then you go."`);
-    } else {
-      pushLog(state, "warn", withEh(state, withSwearing(state, `${hobo.name} talks fast.`, 32), 75));
-    }
+    pushLog(state, "warn", `${hobo.name} gives intel under pressure.`);
+    rememberNpc(state, hobo.id, "violence", `${hobo.name} gave the player intel after being threatened.`);
     recordIntelReport(config, state, hobo, -20);
     return;
   }
@@ -1915,21 +2067,15 @@ function resolveHoboThreat(config: GameConfig, state: GameState, hobo: HoboConfi
   [state.rngState, fightRoll] = randomInt(state.rngState, 0, 100);
   if (fightRoll < 55) {
     const damage = Math.max(1, Math.floor(hobo.toughness / 8));
-    if (hobo.dialogStyle === "rhyme") {
-      pushLog(state, "bad", withViolentSorry(state, `${hobo.name} snaps back, "Sorry, sorry, pain in a bow; push me again and down you go."`, 65));
-    } else {
-      pushLog(state, "bad", withEh(state, withViolentSorry(state, `${hobo.name} fights back.`), 65));
-    }
+    pushLog(state, "bad", withEh(state, withViolentSorry(state, `${hobo.name} fights back.`), 65));
+    rememberNpc(state, hobo.id, "violence", `${hobo.name} fought back after the player threatened them.`);
     damagePlayer(config, state, damage);
     maybeDoctor(config, state);
     return;
   }
 
-  if (hobo.dialogStyle === "rhyme") {
-    pushLog(state, "warn", `${hobo.name} sings a crooked tale: "It might be true, it might be smoke; the string just bent and nearly broke."`);
-  } else {
-    pushLog(state, "warn", withEh(state, withSwearing(state, `${hobo.name} gives you a story that does not quite add up.`, 32), 75));
-  }
+  pushLog(state, "warn", `${hobo.name} gives you a story that does not quite add up.`);
+  rememberNpc(state, hobo.id, "violence", `${hobo.name} gave unreliable intel after the player threatened them.`);
   recordIntelReport(config, state, hobo, -55);
 }
 
@@ -1941,6 +2087,7 @@ export function createGame(config: GameConfig, seed = Date.now()): GameState {
     rngState,
     logIndex: 0,
     market: [],
+    merchantMarket: makeMerchantMarket(config),
     priceHistory: makeHistoricalPriceHistory(
       config,
       rngState,
@@ -1950,10 +2097,12 @@ export function createGame(config: GameConfig, seed = Date.now()): GameState {
       player.turn,
     ),
     dealerStock: makeDealerStock(config),
+    dealerRobberyTurns: makeDealerRobberyTurns(config),
     dealerRelationships: makeDealerRelationships(config),
     hoboRelationships: makeHoboRelationships(config),
     locationInfluence: makeLocationInfluence(config),
     intelReports: [],
+    npcMemory: [],
     player,
     pendingPrompt: null,
     currentHelperPrice: null,
@@ -1979,7 +2128,13 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
     command.type === "buyHoboIntel" ? "INTEL" :
     command.type === "giftHoboDrug" ? "GIFT" :
     command.type === "threatenHobo" ? "THREATEN" :
+    command.type === "rememberNpc" ? "CHAT" :
     command.type.toUpperCase();
+
+  if (command.type === "rememberNpc") {
+    rememberNpc(state, command.npcId, command.kind, command.text);
+    return state;
+  }
 
   if (state.gameOver) {
     return state;
@@ -2029,6 +2184,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
         adjustReputation(state, 1);
       }
       pushLog(state, "good", withEh(state, withSwearing(state, `You bought ${amount} ${drug.name} from ${dealer.name} for ${formatMoney(config, cost)}.`, 24), 62));
+      rememberNpc(state, dealer.id, "interaction", `Player bought ${amount} ${drug.name} from ${dealer.name} for ${formatMoney(config, cost)}.`);
       return state;
     }
 
@@ -2061,6 +2217,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
         adjustReputation(state, 1);
       }
       pushLog(state, "good", withEh(state, withSwearing(state, `You sold ${amount} ${drug.name} to ${dealer.name} for ${formatMoney(config, revenue)}.`, 24), 62));
+      rememberNpc(state, dealer.id, "interaction", `Player sold ${amount} ${drug.name} to ${dealer.name} for ${formatMoney(config, revenue)}.`);
       return state;
     }
 
@@ -2094,6 +2251,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
         adjustReputation(state, 1);
       }
       pushLog(state, "good", withEh(state, withSwearing(state, `You gifted ${amount} ${drug.name} to ${dealer.name}. Relationship +${gain}.`, 30), 65));
+      rememberNpc(state, dealer.id, "interaction", `Player gifted ${amount} ${drug.name} to ${dealer.name}; relationship changed by +${gain}.`);
       return state;
     }
 
@@ -2105,6 +2263,10 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
       const dealer = getDealer(config, command.dealerId);
       if (dealer.locationId !== state.player.locationId) {
         pushLog(state, "bad", withEh(state, `${dealer.name} is not here.`, 45));
+        return state;
+      }
+      if ((state.dealerRobberyTurns?.[dealer.id] ?? 0) === state.player.turn) {
+        pushLog(state, "bad", `You already robbed ${dealer.name} today. Come back after time passes.`);
         return state;
       }
       resolveDealerRobbery(config, state, dealer);
@@ -2131,9 +2293,11 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
         adjustHoboRelationship(state, hobo.id, 1);
         adjustLocationInfluence(state, hobo.locationId, 1);
         pushLog(state, "good", withEh(state, withSwearing(state, `You bought ${hobo.name} a Tims for ${formatMoney(config, price)} and got intel.`, 30), 62));
+        rememberNpc(state, hobo.id, "interaction", `Player bought ${hobo.name} a Tims for ${formatMoney(config, price)} and asked for local intel.`);
       } else {
         adjustHoboRelationship(state, hobo.id, 1);
         pushLog(state, "good", withEh(state, withSwearing(state, `${hobo.name} gives you intel for free.`, 30), 75));
+        rememberNpc(state, hobo.id, "interaction", `${hobo.name} gave the player local intel for free.`);
       }
       recordIntelReport(config, state, hobo, price === 0 ? 12 : 0);
       return state;
@@ -2166,6 +2330,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
         adjustReputation(state, 1);
       }
       pushLog(state, "good", withEh(state, withSwearing(state, `You gifted ${amount} ${drug.name} to ${hobo.name}. Relationship +${gain}.`, 30), 65));
+      rememberNpc(state, hobo.id, "interaction", `Player gifted ${amount} ${drug.name} to ${hobo.name}; relationship changed by +${gain}.`);
       return state;
     }
 
@@ -2281,12 +2446,18 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
     }
 
     case "buyGun": {
-      if (state.player.locationId !== config.serviceLocations.gunShop) {
-        pushLog(state, "bad", "There is no weapon shop here.");
+      const merchant = merchantForTrade(config, state, command.merchantId);
+      if (!merchant) {
+        pushLog(state, "bad", "There is no merchant buying weapons here.");
         return state;
       }
       const gun = getGun(config, command.gunId);
-      const cost = gun.price * amount;
+      const quote = merchantQuote(state, merchant.id, gun.id);
+      if (!merchant.gunIds.includes(gun.id) || !quote) {
+        pushLog(state, "bad", `${merchant.name} is not selling ${gun.name}.`);
+        return state;
+      }
+      const cost = quote.price * amount;
       if (amount <= 0 || cost > state.player.cash || gun.space * amount > state.player.space || totalGuns(state.player) + amount > state.player.helpers + 2) {
         pushLog(state, "bad", `You can't buy that many ${gun.name}.`);
         return state;
@@ -2294,24 +2465,27 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
       state.player.cash -= cost;
       state.player.space -= gun.space * amount;
       state.player.guns[gun.id].carried += amount;
-      pushLog(state, "good", `Bought ${amount} ${gun.name} for ${formatMoney(config, cost)}.`);
+      pushLog(state, "good", `Bought ${amount} ${gun.name} from ${merchant.name} for ${formatMoney(config, cost)}.`);
       return state;
     }
 
     case "sellGun": {
-      if (state.player.locationId !== config.serviceLocations.gunShop) {
-        pushLog(state, "bad", "There is no weapon shop here.");
+      const merchant = merchantForTrade(config, state, command.merchantId);
+      if (!merchant) {
+        pushLog(state, "bad", "There is no merchant buying weapons here.");
         return state;
       }
       const gun = getGun(config, command.gunId);
+      const quote = merchantQuote(state, merchant.id, gun.id);
       if (amount <= 0 || amount > state.player.guns[gun.id].carried) {
         pushLog(state, "bad", `You can't sell that many ${gun.name}.`);
         return state;
       }
+      const revenue = (quote?.bidPrice ?? Math.max(1, Math.floor((gun.price * merchant.bid) / 100))) * amount;
       state.player.guns[gun.id].carried -= amount;
       state.player.space += gun.space * amount;
-      state.player.cash += gun.price * amount;
-      pushLog(state, "good", `Sold ${amount} ${gun.name} for ${formatMoney(config, gun.price * amount)}.`);
+      state.player.cash += revenue;
+      pushLog(state, "good", `Sold ${amount} ${gun.name} to ${merchant.name} for ${formatMoney(config, revenue)}.`);
       return state;
     }
 
@@ -2377,12 +2551,13 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
         state.pendingPrompt = null;
         if (command.answer === "yes") {
           if (state.player.cash < prompt.price) {
-            pushLog(
-              state,
-              "bad",
-              withEh(state, renderDealerOfferText(config, state, dealer, prompt.poorMessage, prompt.price, prompt.relationshipGain), 70),
-            );
-            return state;
+          pushLog(
+            state,
+            "bad",
+            withEh(state, renderDealerOfferText(config, state, dealer, prompt.poorMessage, prompt.price, prompt.relationshipGain), 70),
+          );
+          rememberNpc(state, dealer.id, "offer", `Player accepted ${dealer.name}'s side offer but did not have enough cash.`);
+          return state;
           }
 
           state.player.cash -= prompt.price;
@@ -2403,12 +2578,14 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
               68,
             ),
           );
+          rememberNpc(state, dealer.id, "offer", `Player accepted ${dealer.name}'s side offer, paid ${formatMoney(config, prompt.price)}, and gained +${prompt.relationshipGain} relationship.`);
         } else {
           pushLog(
             state,
             "warn",
             withEh(state, withSwearing(state, renderDealerOfferText(config, state, dealer, prompt.declineMessage, prompt.price, prompt.relationshipGain), 26), 68),
           );
+          rememberNpc(state, dealer.id, "offer", `Player declined ${dealer.name}'s side offer.`);
         }
         return state;
       }
