@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConversationOverlay, type NpcConversationTarget } from "./components/ConversationOverlay";
 import { EventLog } from "./components/EventLog";
 import { FinancePanel } from "./components/FinancePanel";
@@ -20,6 +20,8 @@ import { useNpcDialogue } from "./hooks/useNpcDialogue";
 import { useOllamaAvailability } from "./hooks/useOllamaAvailability";
 
 const SAVE_KEY = "harbour-hustle-state-v1";
+const PROFILE_SAVE_PREFIX = "harbour-hustle-profile-v1:";
+const PROFILE_INDEX_KEY = "harbour-hustle-profile-index-v1";
 const PRE_RENAME_SAVE_PREFIX = ["dope", "wars-web-state-v"].join("");
 const LEGACY_SAVE_KEYS = [
   "harbour-hustle-state-v0",
@@ -44,7 +46,77 @@ interface ActionOutcome {
   tone: Tone;
 }
 
-function loadState(): GameState {
+interface DealerProfile {
+  key: string;
+  name: string;
+}
+
+interface DealerProfileRecord {
+  dealerName: string;
+  savedAt: string;
+  state: GameState;
+  version: 1;
+}
+
+function cleanDealerName(name: string): string {
+  return name.trim().replace(/\s+/g, " ");
+}
+
+function dealerProfileKey(name: string): string {
+  return cleanDealerName(name).toLowerCase();
+}
+
+function profileStorageKey(key: string): string {
+  return `${PROFILE_SAVE_PREFIX}${encodeURIComponent(key)}`;
+}
+
+function readProfileIndex(): DealerProfile[] {
+  try {
+    const saved = window.localStorage.getItem(PROFILE_INDEX_KEY);
+    if (!saved) {
+      return [];
+    }
+
+    const parsed = JSON.parse(saved) as DealerProfile[];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((profile) => typeof profile?.key === "string" && typeof profile?.name === "string");
+  } catch {
+    return [];
+  }
+}
+
+function writeProfileIndex(profile: DealerProfile): void {
+  try {
+    const profiles = readProfileIndex().filter((item) => item.key !== profile.key);
+    profiles.unshift(profile);
+    window.localStorage.setItem(PROFILE_INDEX_KEY, JSON.stringify(profiles.slice(0, 20)));
+  } catch {
+    // Saves still work without the profile index; the name key is the source of truth.
+  }
+}
+
+function readSavedRecord(key: string): DealerProfileRecord | null {
+  try {
+    const saved = window.localStorage.getItem(profileStorageKey(key));
+    if (!saved) {
+      return null;
+    }
+
+    const parsed = JSON.parse(saved) as DealerProfileRecord;
+    if (!parsed || typeof parsed.dealerName !== "string" || !parsed.state) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function readLegacyState(config: GameConfig, removeMigrated: boolean): GameState | null {
   const keys = [SAVE_KEY, ...LEGACY_SAVE_KEYS];
   for (const key of keys) {
     let saved: string | null = null;
@@ -59,8 +131,8 @@ function loadState(): GameState {
     }
 
     try {
-      const state = hydrateGameState(DEFAULT_GAME_CONFIG, JSON.parse(saved) as GameState);
-      if (key !== SAVE_KEY) {
+      const state = hydrateGameState(config, JSON.parse(saved) as GameState);
+      if (removeMigrated) {
         window.localStorage.removeItem(key);
       }
       return state;
@@ -69,7 +141,103 @@ function loadState(): GameState {
     }
   }
 
-  return createGame(DEFAULT_GAME_CONFIG);
+  return null;
+}
+
+function buildDealerProfile(name: string): DealerProfile | null {
+  const cleaned = cleanDealerName(name);
+  if (!cleaned) {
+    return null;
+  }
+
+  const key = dealerProfileKey(cleaned);
+  const saved = readSavedRecord(key);
+  return {
+    key,
+    name: saved?.dealerName ?? cleaned,
+  };
+}
+
+function withDealerName(state: GameState, profile: DealerProfile): GameState {
+  return {
+    ...state,
+    player: {
+      ...state.player,
+      name: profile.name,
+    },
+  };
+}
+
+function loadProfileState(config: GameConfig, profile: DealerProfile): GameState {
+  const saved = readSavedRecord(profile.key);
+  if (saved) {
+    return withDealerName(hydrateGameState(config, saved.state), profile);
+  }
+
+  const canAdoptLegacySave = readProfileIndex().length === 0;
+  if (canAdoptLegacySave) {
+    const legacyState = readLegacyState(config, true);
+    if (legacyState) {
+      return withDealerName(legacyState, profile);
+    }
+  }
+
+  return withDealerName(createGame(config), profile);
+}
+
+interface DealerNamePromptProps {
+  currentName?: string;
+  onCancel?: () => void;
+  onSubmit: (name: string) => void;
+}
+
+function DealerNamePrompt({ currentName = "", onCancel, onSubmit }: DealerNamePromptProps) {
+  const [name, setName] = useState(currentName);
+  const cleaned = cleanDealerName(name);
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!cleaned) {
+      return;
+    }
+    onSubmit(cleaned);
+  };
+
+  return (
+    <div className="outcome-overlay profile-overlay" role="presentation">
+      <section aria-labelledby="profile-title" aria-modal="true" className="outcome-dialog profile-dialog" role="dialog">
+        <div className="outcome-header">
+          <div>
+            <p className="panel-caption">PROFILE CHECK</p>
+            <h2 id="profile-title">DEALER NAME</h2>
+          </div>
+          {onCancel && (
+            <TerminalButton className="outcome-close" onClick={onCancel}>
+              CLOSE
+            </TerminalButton>
+          )}
+        </div>
+
+        <form className="profile-form" onSubmit={submit}>
+          <label htmlFor="dealer-name-input">NAME</label>
+          <input
+            autoComplete="nickname"
+            autoFocus
+            id="dealer-name-input"
+            maxLength={40}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Solo Dealer"
+            value={name}
+          />
+          <div className="profile-actions">
+            <TerminalButton disabled={!cleaned} tone="good" type="submit">
+              START / CONTINUE
+            </TerminalButton>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
 }
 
 function shouldShowOutcome(command: GameCommand): boolean {
@@ -371,7 +539,9 @@ export default function App() {
   const config = DEFAULT_GAME_CONFIG;
   const ollamaStatus = useOllamaAvailability(config);
   const llmAvailable = ollamaStatus === "available";
-  const [state, setState] = useState<GameState>(() => loadState());
+  const [dealerProfile, setDealerProfile] = useState<DealerProfile | null>(null);
+  const [profilePromptOpen, setProfilePromptOpen] = useState(true);
+  const [state, setState] = useState<GameState>(() => createGame(config));
   const [outcome, setOutcome] = useState<ActionOutcome | null>(null);
   const [conversation, setConversation] = useState<NpcConversationTarget | null>(null);
   const rememberedOutcomeLineRef = useRef<string | null>(null);
@@ -379,12 +549,42 @@ export default function App() {
 
   useEffect(() => {
     stateRef.current = state;
+    if (!dealerProfile) {
+      return;
+    }
+
     try {
-      window.localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      window.localStorage.setItem(profileStorageKey(dealerProfile.key), JSON.stringify({
+        dealerName: dealerProfile.name,
+        savedAt: new Date().toISOString(),
+        state,
+        version: 1,
+      } satisfies DealerProfileRecord));
+      writeProfileIndex(dealerProfile);
     } catch {
       // localStorage can be unavailable or full; the active in-memory game still works.
     }
-  }, [state]);
+  }, [dealerProfile, state]);
+
+  const startDealerProfile = useCallback(
+    (name: string) => {
+      const profile = buildDealerProfile(name);
+      if (!profile) {
+        return;
+      }
+
+      const next = loadProfileState(config, profile);
+      stateRef.current = next;
+      rememberedOutcomeLineRef.current = null;
+      setDealerProfile(profile);
+      writeProfileIndex(profile);
+      setState(next);
+      setOutcome(null);
+      setConversation(null);
+      setProfilePromptOpen(false);
+    },
+    [config],
+  );
 
   const dispatch = useCallback(
     (command: GameCommand) => {
@@ -405,12 +605,8 @@ export default function App() {
   );
 
   const newGame = useCallback(() => {
-    const next = createGame(config);
-    stateRef.current = next;
-    setState(next);
-    setOutcome(null);
-    setConversation(null);
-  }, [config]);
+    setProfilePromptOpen(true);
+  }, []);
 
   const openConversation = useCallback((target: NpcConversationTarget) => {
     setConversation(target);
@@ -510,7 +706,7 @@ export default function App() {
 
   return (
     <main className="terminal-shell">
-      <StatusBar config={config} state={state} onNewGame={newGame} />
+      <StatusBar config={config} dealerName={dealerProfile?.name ?? null} state={state} onNewGame={newGame} />
 
       <div className="app-grid">
         <aside className="left-column">
@@ -566,6 +762,14 @@ export default function App() {
           onRemember={(npcId, kind, text) => dispatch({ type: "rememberNpc", npcId, kind, text })}
           onClose={() => setConversation(null)}
           target={conversation}
+        />
+      )}
+
+      {profilePromptOpen && (
+        <DealerNamePrompt
+          currentName={dealerProfile?.name}
+          onCancel={dealerProfile ? () => setProfilePromptOpen(false) : undefined}
+          onSubmit={startDealerProfile}
         />
       )}
 

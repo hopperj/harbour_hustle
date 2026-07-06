@@ -6,6 +6,7 @@ import brooklynRose from "../../docs/npcs/brooklyn-rose.md?raw";
 import chebuctoCam from "../../docs/npcs/chebucto-cam.md?raw";
 import ferryDockFrank from "../../docs/npcs/ferry-dock-frank.md?raw";
 import ferryJo from "../../docs/npcs/ferry-jo.md?raw";
+import johnathan from "../../docs/npcs/johnathan.md?raw";
 import jWood from "../../docs/npcs/j-wood.md?raw";
 import mamaDee from "../../docs/npcs/mama-dee.md?raw";
 import needleNick from "../../docs/npcs/needle-nick.md?raw";
@@ -32,6 +33,7 @@ const NPC_DOCS: Record<string, string> = {
   "chebucto-cam": chebuctoCam,
   "ferry-dock-frank": ferryDockFrank,
   "ferry-jo": ferryJo,
+  johnathan,
   "j-wood": jWood,
   "mama-dee": mamaDee,
   "needle-nick": needleNick,

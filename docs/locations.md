@@ -9,6 +9,7 @@ Harbour Hustle uses an HRM-only travel map. Location ids are stable config keys;
 | Downtown Halifax | `downtown-halifax` | 75 | 4-10 | High-police money hub with bank and loan shark access. |
 | North End Halifax | `north-end-halifax` | 35 | 6-12 | Early active market with Mama Dee, Needle Nick, and Tin Can Marty. |
 | West End Halifax | `west-end-halifax` | 12 | 6-10 | Low-police balanced market with J-Wood and Chebucto Cam. |
+| Westmount | `westmount` | 42 | 4-8 | Posh, lower-volume market with classy cocaine and hallucinogen stock. |
 | Dartmouth | `dartmouth` | 45 | 6-12 | Mid-risk cross-harbour market with proud local dealers. |
 | Bedford | `bedford` | 30 | 5-10 | Lower-heat connected market. |
 | Sackville | `sackville` | 22 | 7-12 | Lower-police, higher-stock service stop with a full salvage merchant. |
@@ -43,6 +44,7 @@ Merchants sell a configured subset of weapons/items at daily market prices. Any 
 | Downtown Halifax | Shady Rich, Sweet Aidan | Barrington Sue, Shanobi |
 | North End Halifax | Mama Dee, Needle Nick | Tin Can Marty |
 | West End Halifax | J-Wood | Chebucto Cam |
+| Westmount | Johnathan | -- |
 | Dartmouth | Boardwalk Sal | Boardwalk Benny |
 | Bedford | Bedford Rose | Stoop Annie |
 | Sackville | Sackville Vic | Rail Yard Ray |

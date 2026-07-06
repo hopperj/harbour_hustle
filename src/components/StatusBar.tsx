@@ -5,11 +5,12 @@ import { TerminalButton } from "./TerminalButton";
 
 interface StatusBarProps {
   config: GameConfig;
+  dealerName?: string | null;
   state: GameState;
   onNewGame: () => void;
 }
 
-export function StatusBar({ config, state, onNewGame }: StatusBarProps) {
+export function StatusBar({ config, dealerName, state, onNewGame }: StatusBarProps) {
   const { player } = state;
   const location = config.locations.find((item) => item.id === player.locationId) ?? config.locations[0];
   const repClass = player.reputation < 0 ? "money-bad" : player.reputation > 0 ? "money-good" : "";
@@ -17,7 +18,10 @@ export function StatusBar({ config, state, onNewGame }: StatusBarProps) {
 
   return (
     <header className="status-grid" aria-label="Game status">
-      <div className="brand">HARBOUR HUSTLE</div>
+      <div className="brand">
+        <span>HARBOUR HUSTLE</span>
+        {dealerName && <small className="dealer-profile">DEALER {dealerName}</small>}
+      </div>
       <div className="status-location">{location.name.toUpperCase()}</div>
       <div className="status-stat money-good">
         <span>CASH</span>

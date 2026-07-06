@@ -16,6 +16,7 @@ Generated lines are constrained by shared prompt rails in `src/game/llmDialogue.
 - [Needle Nick](needle-nick.md)
 - [Rico](rico.md)
 - [Professor X](professor-x.md)
+- [Johnathan](johnathan.md)
 - [Shady Rich](shady-rich.md)
 - [Sweet Aidan](sweet-aidan.md)
 - [Boardwalk Sal](boardwalk-sal.md)

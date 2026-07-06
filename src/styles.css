@@ -167,11 +167,27 @@ p {
 }
 
 .brand {
+  gap: 0.16rem;
   font-size: clamp(1.7rem, 2.55vw, 2.05rem);
   font-weight: 900;
   line-height: 0.95;
   color: var(--text);
   text-shadow: 0 0 1rem var(--shadow);
+}
+
+.brand span,
+.brand small {
+  display: block;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.dealer-profile {
+  color: var(--warn);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-shadow: none;
 }
 
 .status-location {
@@ -1017,6 +1033,28 @@ p {
 .conversation-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.profile-dialog {
+  inline-size: min(32rem, 100%);
+}
+
+.profile-form {
+  display: grid;
+  gap: 0.55rem;
+  margin-block-start: 0.85rem;
+}
+
+.profile-form label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-start: 0.25rem;
 }
 
 .outcome-prompt {

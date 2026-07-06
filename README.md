@@ -14,8 +14,9 @@ See [CHANGELOG.md](CHANGELOG.md) for the full change history.
 
 - React, TypeScript, and Vite app architecture.
 - Responsive retro terminal UI for desktop and mobile.
+- Dealer-name startup prompt with browser-local profile saves keyed by that name.
 - Config-driven drugs, locations, prices, services, dealers, police, street intel contacts, and weapons.
-- HRM-only travel map: Downtown Halifax, North End Halifax, West End Halifax, Dartmouth, Bedford, Sackville, Spryfield, Halifax Public Gardens, and Eastern Passage.
+- HRM-only travel map: Downtown Halifax, North End Halifax, West End Halifax, Westmount, Dartmouth, Bedford, Sackville, Spryfield, Halifax Public Gardens, and Eastern Passage.
 - Stay-in-place and travel actions, each advancing the simulation.
 - Dealer-specific drug coverage, stock, relationship thresholds, gifting, robbery, retaliation, combat, and reputation effects.
 - Named street intel contacts with trust, threats, gifts, paid intel, and conversational dialog options.
@@ -28,6 +29,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full change history.
 - Market price history and per-drug price charts, including simulated history before day one and gaps when a drug was unavailable.
 - Player-facing Halifax flavor: Tims, Timbits, hoser phrasing, "eh", "my guy", apologetic police, swearing, and local NPC personalities.
 - Downtown Halifax now includes Shanobi, a rhyming fiddle-playing intel contact, and Sweet Aidan, a sketchy dealer with odd questions and obscure facts.
+- Westmount includes Johnathan, a posh physics-and-biking dealer focused on cocaine and hallucinogens.
 - Location merchants with changing buy/sell prices who sell configured weapon/item lists and buy any carried weapon.
 - Canadian improvised weapons replacing firearms: tire iron, glass Coke-a-Cola bottle, sock full of loonies, sharpened hockey stick, Zamboni-part mace, bow and arrow, and more.
 - New Game button in the persistent status bar.
@@ -111,6 +113,7 @@ The zip contains the built `index.html` and `assets/` files at the archive root.
 - `src/hooks/useOllamaAvailability.ts` - startup Ollama health check used to choose generated or fallback dialog.
 - `src/components/` - React UI panels and terminal controls.
 - `src/styles.css` - terminal visual system and responsive layout.
+- `docs/player-profiles.md` - dealer-name profile save and resume behavior.
 - `docs/locations.md` - HRM location, service, and NPC placement map.
 - `docs/npcs/` - structured NPC context files bundled into Ollama dialog prompts, including role, hoser phrasing, and example dialog.
 - `docs/concepts/` - concept and QA screenshots captured during UI development.
@@ -121,5 +124,6 @@ The zip contains the built `index.html` and `assets/` files at the archive root.
 ## Notes
 
 - The original source reference folder is intentionally excluded from git via `.gitignore`.
+- Player profiles are stored in the browser's local storage for the current app origin. Using the same dealer name on the same browser/origin resumes that saved run.
 - The internal code still has some legacy names such as `guns` for save and engine compatibility, but the player-facing game uses weapons.
 - The game currently targets single player. Multiplayer is planned, so the game data and engine boundaries are being kept relatively clean.
