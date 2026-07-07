@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { generateNpcDialogue } from "../game/llmDialogue";
-import { npcDocumentForId } from "../game/npcDocs";
 import type { GameConfig } from "../game/types";
 
 type DialogueStatus = "fallback" | "loading" | "ready";
@@ -34,8 +33,7 @@ export function useNpcDialogue({
   const [dialogue, setDialogue] = useState<NpcDialogueState>({ status: "fallback", text: fallback });
 
   useEffect(() => {
-    const npcDocument = npcDocumentForId(npcId);
-    if (disabled || !llmAvailable || !npcDocument || !npcName || !scene.trim() || !config.llmDialogue.enabled) {
+    if (disabled || !llmAvailable || !npcId || !npcName || !scene.trim() || !config.llmDialogue.enabled) {
       setDialogue({ status: "fallback", text: fallback });
       return;
     }
@@ -46,7 +44,7 @@ export function useNpcDialogue({
     void generateNpcDialogue({
       config,
       fallback,
-      npcDocument,
+      npcId,
       npcName,
       scene,
       signal: controller.signal,

@@ -18,7 +18,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   fightTimeoutSeconds: 5,
   llmDialogue: {
     enabled: true,
-    endpoint: "http://127.0.0.1:11434",
+    endpoint: "/api/llm",
     healthCheckTimeoutMs: 2_000,
     maxTokens: 80,
     model: "llama3.1:8b",
@@ -232,6 +232,40 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
       bid: 58,
     },
   ],
+  doctors: [
+    {
+      id: "dr-macisaac",
+      name: "Dr. Lorraine MacIsaac",
+      locationId: "downtown-halifax",
+      description: "Back-office stitches near Barrington, quick but not cheap.",
+      baseFee: 250,
+      pricePerHealth: 38,
+    },
+    {
+      id: "nurse-gordie",
+      name: "Nurse Gordie",
+      locationId: "dartmouth",
+      description: "No-questions patch jobs out past the ferry terminal.",
+      baseFee: 180,
+      pricePerHealth: 30,
+    },
+    {
+      id: "doc-crowell",
+      name: "Doc Crowell",
+      locationId: "spryfield",
+      description: "Rough bedside manner, steady hands, cash on the tray.",
+      baseFee: 120,
+      pricePerHealth: 24,
+    },
+    {
+      id: "dr-celeste-vein",
+      name: "Dr. Celeste Vein",
+      locationId: "westmount",
+      description: "Posh private care with a price tag to match.",
+      baseFee: 520,
+      pricePerHealth: 52,
+    },
+  ],
   cops: [
     {
       id: "hardass",
@@ -364,6 +398,10 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
         "Johnathan says the hill has a beautiful energy flow when the tabs are clean, eh.",
         "Johnathan wants to explain conservation of momentum before he discusses anything less elegant than shrooms.",
         "Johnathan says a proper ride through Westmount is just applied physics with better scenery.",
+        "Johnathan says Newton, his cat, can tell your intentions by the angular momentum of your footsteps.",
+        "Johnathan warns you not to look at Newton funny because the cat is a sensitive observer of hostile energy, my guy.",
+        "Johnathan says Newton thinks you smell like low-pressure weather and possible betrayal, eh.",
+        "Johnathan insists Newton is not paranoid, just gifted at detecting anyone plotting against him.",
       ],
     },
     {

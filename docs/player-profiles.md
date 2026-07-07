@@ -8,4 +8,4 @@ Profiles are stored in the browser's local storage for the current app origin. A
 
 The first named profile can adopt the older single-slot browser save, if one exists. After that migration, new saves use the dealer-name profile format.
 
-The status bar shows the active dealer name under the Harbour Hustle title. The New Game button opens the dealer-name prompt instead of immediately replacing the active run, so the player can switch profiles or create a new one without accidentally wiping progress.
+The status bar shows the active dealer name under the Harbour Hustle title. On startup, entering an existing dealer name resumes that profile. The New Game button opens a new-run dealer-name prompt; submitting a name there starts a fresh run and overwrites that profile's saved game, even when the name matches the current profile.

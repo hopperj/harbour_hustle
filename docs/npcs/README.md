@@ -1,6 +1,6 @@
 # NPC Context Index
 
-These files are structured context documents for LLM-generated NPC dialog. The web app bundles these markdown files and feeds the matching NPC file into Ollama whenever it asks `llama3.1:8b` for a spoken line.
+These files are structured context documents for LLM-generated NPC dialog. The web app server reads the matching NPC file and feeds it into Ollama whenever it asks `llama3.1:8b` for a spoken line. Browsers call the same-origin `/api/llm/*` endpoints and do not contact Ollama directly.
 
 Each NPC file uses the same headings so runtime retrieval can feed a consistent context shape to the model. The `Role In The Game` section is especially important because it tells the model whether the character is selling drugs, acting as a hobo/street intel contact, or confronting the player as police.
 
@@ -37,6 +37,13 @@ Generated lines are constrained by shared prompt rails in `src/game/llmDialogue.
 - [Rail Yard Ray](rail-yard-ray.md)
 - [Ferry Dock Frank](ferry-dock-frank.md)
 - [Chebucto Cam](chebucto-cam.md)
+
+## Doctors
+
+- [Dr. Lorraine MacIsaac](dr-macisaac.md)
+- [Nurse Gordie](nurse-gordie.md)
+- [Doc Crowell](doc-crowell.md)
+- [Dr. Celeste Vein](dr-celeste-vein.md)
 
 ## Police
 

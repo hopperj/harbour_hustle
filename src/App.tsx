@@ -58,6 +58,8 @@ interface DealerProfileRecord {
   version: 1;
 }
 
+type ProfilePromptMode = "resume" | "new";
+
 function cleanDealerName(name: string): string {
   return name.trim().replace(/\s+/g, " ");
 }
@@ -144,14 +146,14 @@ function readLegacyState(config: GameConfig, removeMigrated: boolean): GameState
   return null;
 }
 
-function buildDealerProfile(name: string): DealerProfile | null {
+function buildDealerProfile(name: string, useSavedName: boolean): DealerProfile | null {
   const cleaned = cleanDealerName(name);
   if (!cleaned) {
     return null;
   }
 
   const key = dealerProfileKey(cleaned);
-  const saved = readSavedRecord(key);
+  const saved = useSavedName ? readSavedRecord(key) : null;
   return {
     key,
     name: saved?.dealerName ?? cleaned,
@@ -187,11 +189,12 @@ function loadProfileState(config: GameConfig, profile: DealerProfile): GameState
 
 interface DealerNamePromptProps {
   currentName?: string;
+  mode: ProfilePromptMode;
   onCancel?: () => void;
-  onSubmit: (name: string) => void;
+  onSubmit: (name: string, mode: ProfilePromptMode) => void;
 }
 
-function DealerNamePrompt({ currentName = "", onCancel, onSubmit }: DealerNamePromptProps) {
+function DealerNamePrompt({ currentName = "", mode, onCancel, onSubmit }: DealerNamePromptProps) {
   const [name, setName] = useState(currentName);
   const cleaned = cleanDealerName(name);
 
@@ -200,16 +203,18 @@ function DealerNamePrompt({ currentName = "", onCancel, onSubmit }: DealerNamePr
     if (!cleaned) {
       return;
     }
-    onSubmit(cleaned);
+    onSubmit(cleaned, mode);
   };
+
+  const isNewGame = mode === "new";
 
   return (
     <div className="outcome-overlay profile-overlay" role="presentation">
       <section aria-labelledby="profile-title" aria-modal="true" className="outcome-dialog profile-dialog" role="dialog">
         <div className="outcome-header">
           <div>
-            <p className="panel-caption">PROFILE CHECK</p>
-            <h2 id="profile-title">DEALER NAME</h2>
+            <p className="panel-caption">{isNewGame ? "NEW RUN" : "PROFILE CHECK"}</p>
+            <h2 id="profile-title">{isNewGame ? "NEW DEALER NAME" : "DEALER NAME"}</h2>
           </div>
           {onCancel && (
             <TerminalButton className="outcome-close" onClick={onCancel}>
@@ -231,7 +236,7 @@ function DealerNamePrompt({ currentName = "", onCancel, onSubmit }: DealerNamePr
           />
           <div className="profile-actions">
             <TerminalButton disabled={!cleaned} tone="good" type="submit">
-              START / CONTINUE
+              {isNewGame ? "START NEW GAME" : "START / CONTINUE"}
             </TerminalButton>
           </div>
         </form>
@@ -429,12 +434,32 @@ function outcomeEntries(command: GameCommand, entries: EventLogEntry[], prompt: 
   return withoutPromptEcho;
 }
 
+function promptForActionOutcome(command: GameCommand, prompt: PendingPrompt | null): PendingPrompt | null {
+  if (!prompt) {
+    return null;
+  }
+
+  if (command.type === "approachDealer" && prompt.type === "dealer-offer") {
+    return prompt;
+  }
+
+  if (
+    (command.type === "travel" || command.type === "stay" || command.type === "dropDrug") &&
+    (prompt.type === "cops" || prompt.type === "wild-weed" || prompt.type === "bargain-helper" || prompt.type === "bargain-gun")
+  ) {
+    return prompt;
+  }
+
+  return null;
+}
+
 function outcomeScene(
   command: GameCommand,
   npc: { id: string; name: string; role: string } | null,
   entries: EventLogEntry[],
   previous: GameState,
   next: GameState,
+  prompt: PendingPrompt | null,
 ): string {
   if (!npc) {
     return "";
@@ -470,12 +495,12 @@ function outcomeScene(
     common.push("The player just threatened you for intel. React to the threat and outcome. If you gave intel, convey only the game-decided facts.");
   } else if (command.type === "robDealer") {
     common.push("The player just tried to rob you. React to the robbery outcome as the dealer who experienced it. This line should be the NPC's generated reaction.");
-  } else if (command.type === "approachDealer" && next.pendingPrompt?.type === "dealer-offer") {
-    common.push(`You are making this side offer to the player: ${next.pendingPrompt.text}`);
-  } else if (next.pendingPrompt?.type === "cops") {
-    common.push(`You just confronted the player with this police prompt: ${next.pendingPrompt.text}`);
-  } else if (next.pendingPrompt?.type === "dealer-offer") {
-    common.push(`You are making this side offer to the player: ${next.pendingPrompt.text}`);
+  } else if (command.type === "approachDealer" && prompt?.type === "dealer-offer") {
+    common.push(`You are making this side offer to the player: ${prompt.text}`);
+  } else if (prompt?.type === "cops") {
+    common.push(`You just confronted the player with this police prompt: ${prompt.text}`);
+  } else if (prompt?.type === "dealer-offer") {
+    common.push(`You are making this side offer to the player: ${prompt.text}`);
   } else if (command.type === "answerPrompt" && previous.pendingPrompt?.type === "cops") {
     common.push(`The player chose ${command.answer.toUpperCase()} during a police encounter. React to that result.`);
   } else if (command.type === "answerPrompt" && previous.pendingPrompt?.type === "dealer-offer") {
@@ -490,8 +515,9 @@ function buildOutcome(config: GameConfig, command: GameCommand, previous: GameSt
     return null;
   }
 
-  const prompt = next.pendingPrompt;
-  const entries = outcomeEntries(command, newEntries(previous, next), prompt);
+  const pendingPrompt = next.pendingPrompt;
+  const prompt = promptForActionOutcome(command, pendingPrompt);
+  const entries = outcomeEntries(command, newEntries(previous, next), pendingPrompt);
   if (entries.length === 0 && !prompt) {
     return null;
   }
@@ -500,7 +526,7 @@ function buildOutcome(config: GameConfig, command: GameCommand, previous: GameSt
 
   return {
     dialogueFallback: npc ? `${npc.name} watches how you react.` : "",
-    dialogueScene: outcomeScene(command, npc, entries, previous, next),
+    dialogueScene: outcomeScene(command, npc, entries, previous, next, prompt),
     dealerId: command.type === "robDealer" ? command.dealerId : undefined,
     entries,
     hoboId: "hoboId" in command ? command.hoboId : undefined,
@@ -541,6 +567,7 @@ export default function App() {
   const llmAvailable = ollamaStatus === "available";
   const [dealerProfile, setDealerProfile] = useState<DealerProfile | null>(null);
   const [profilePromptOpen, setProfilePromptOpen] = useState(true);
+  const [profilePromptMode, setProfilePromptMode] = useState<ProfilePromptMode>("resume");
   const [state, setState] = useState<GameState>(() => createGame(config));
   const [outcome, setOutcome] = useState<ActionOutcome | null>(null);
   const [conversation, setConversation] = useState<NpcConversationTarget | null>(null);
@@ -567,13 +594,13 @@ export default function App() {
   }, [dealerProfile, state]);
 
   const startDealerProfile = useCallback(
-    (name: string) => {
-      const profile = buildDealerProfile(name);
+    (name: string, mode: ProfilePromptMode) => {
+      const profile = buildDealerProfile(name, mode === "resume");
       if (!profile) {
         return;
       }
 
-      const next = loadProfileState(config, profile);
+      const next = mode === "new" ? withDealerName(createGame(config), profile) : loadProfileState(config, profile);
       stateRef.current = next;
       rememberedOutcomeLineRef.current = null;
       setDealerProfile(profile);
@@ -581,6 +608,7 @@ export default function App() {
       setState(next);
       setOutcome(null);
       setConversation(null);
+      setProfilePromptMode("resume");
       setProfilePromptOpen(false);
     },
     [config],
@@ -605,6 +633,7 @@ export default function App() {
   );
 
   const newGame = useCallback(() => {
+    setProfilePromptMode("new");
     setProfilePromptOpen(true);
   }, []);
 
@@ -768,6 +797,7 @@ export default function App() {
       {profilePromptOpen && (
         <DealerNamePrompt
           currentName={dealerProfile?.name}
+          mode={profilePromptMode}
           onCancel={dealerProfile ? () => setProfilePromptOpen(false) : undefined}
           onSubmit={startDealerProfile}
         />

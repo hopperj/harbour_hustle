@@ -24,6 +24,12 @@ Harbour Hustle uses an HRM-only travel map. Location ids are stable config keys;
 | Bank | Downtown Halifax |
 | Loan shark | Downtown Halifax |
 | Pub | Spryfield |
+| Doctor: Dr. Lorraine MacIsaac | Downtown Halifax |
+| Doctor: Nurse Gordie | Dartmouth |
+| Doctor: Doc Crowell | Spryfield |
+| Doctor: Dr. Celeste Vein | Westmount |
+
+Doctors are location-bound NPC services. They do not appear as automatic post-combat prompts; injured players must visit a doctor's location and pay the displayed heal price.
 
 ## Merchants
 
@@ -39,18 +45,18 @@ Merchants sell a configured subset of weapons/items at daily market prices. Any 
 
 ## NPC Placement
 
-| Location | Dealers | Street intel contacts |
-|---|---|---|
-| Downtown Halifax | Shady Rich, Sweet Aidan | Barrington Sue, Shanobi |
-| North End Halifax | Mama Dee, Needle Nick | Tin Can Marty |
-| West End Halifax | J-Wood | Chebucto Cam |
-| Westmount | Johnathan | -- |
-| Dartmouth | Boardwalk Sal | Boardwalk Benny |
-| Bedford | Bedford Rose | Stoop Annie |
-| Sackville | Sackville Vic | Rail Yard Ray |
-| Spryfield | Rico | Scratchy Lou |
-| Halifax Public Gardens | Professor X | Benchwise Eddie |
-| Eastern Passage | Ferry Jo | Ferry Dock Frank |
+| Location | Dealers | Street intel contacts | Doctors |
+|---|---|---|---|
+| Downtown Halifax | Shady Rich, Sweet Aidan | Barrington Sue, Shanobi | Dr. Lorraine MacIsaac |
+| North End Halifax | Mama Dee, Needle Nick | Tin Can Marty | -- |
+| West End Halifax | J-Wood | Chebucto Cam | -- |
+| Westmount | Johnathan | -- | Dr. Celeste Vein |
+| Dartmouth | Boardwalk Sal | Boardwalk Benny | Nurse Gordie |
+| Bedford | Bedford Rose | Stoop Annie | -- |
+| Sackville | Sackville Vic | Rail Yard Ray | -- |
+| Spryfield | Rico | Scratchy Lou | Doc Crowell |
+| Halifax Public Gardens | Professor X | Benchwise Eddie | -- |
+| Eastern Passage | Ferry Jo | Ferry Dock Frank | -- |
 
 ## Save Migration
 

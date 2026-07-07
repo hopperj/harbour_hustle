@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TerminalButton } from "./TerminalButton";
 import { formatMoney, parseAmount } from "../game/format";
-import { merchantQuote, merchantsForLocation } from "../game/engine";
+import { doctorVisitPrice, doctorsForLocation, merchantQuote, merchantsForLocation } from "../game/engine";
 import type { GameCommand, GameConfig, GameState } from "../game/types";
 
 interface ServicePanelProps {
@@ -16,6 +16,7 @@ export function ServicePanel({ config, state, dispatch }: ServicePanelProps) {
   const [helperAmount, setHelperAmount] = useState("1");
   const atPub = state.player.locationId === config.serviceLocations.roughPub;
   const localMerchants = merchantsForLocation(config, state.player.locationId);
+  const localDoctors = doctorsForLocation(config, state.player.locationId);
   const selectedMerchant =
     localMerchants.find((merchant) => merchant.id === selectedMerchantId) ?? localMerchants[0] ?? null;
   const merchantLocations = Array.from(
@@ -24,6 +25,11 @@ export function ServicePanel({ config, state, dispatch }: ServicePanelProps) {
     ),
   ).join(", ");
   const pubLocation = config.locations.find((location) => location.id === config.serviceLocations.roughPub)?.name ?? "unknown";
+  const doctorLocations = Array.from(
+    new Set(
+      config.doctors.map((doctor) => config.locations.find((location) => location.id === doctor.locationId)?.name ?? doctor.locationId),
+    ),
+  ).join(", ");
 
   return (
     <section className="terminal-panel service-panel" aria-label="Local services">
@@ -102,6 +108,36 @@ export function ServicePanel({ config, state, dispatch }: ServicePanelProps) {
         </div>
       ) : (
         <p className="panel-caption">Merchants trade in {merchantLocations}.</p>
+      )}
+
+      {localDoctors.length > 0 ? (
+        <div className="doctor-services">
+          <h3>DOCTORS</h3>
+          <div className="service-list">
+            {localDoctors.map((doctor) => {
+              const price = doctorVisitPrice(state, doctor);
+              const needsHealing = state.player.health < 100;
+              return (
+                <div className="service-row" key={doctor.id}>
+                  <div>
+                    <h4>{doctor.name}</h4>
+                    <p>{doctor.description}</p>
+                    <span>{needsHealing ? `${formatMoney(config, price)} to heal` : "No treatment needed"}</span>
+                  </div>
+                  <TerminalButton
+                    onClick={() => dispatch({ type: "visitDoctor", doctorId: doctor.id })}
+                    disabled={!needsHealing || price > state.player.cash || state.pendingPrompt !== null || state.gameOver}
+                    tone={needsHealing ? "good" : "default"}
+                  >
+                    HEAL
+                  </TerminalButton>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <p className="panel-caption">Doctors take patients in {doctorLocations}.</p>
       )}
 
       {atPub ? (

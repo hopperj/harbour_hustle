@@ -50,6 +50,15 @@ export interface MerchantConfig {
   bid: number;
 }
 
+export interface DoctorConfig {
+  id: string;
+  name: string;
+  locationId: string;
+  description: string;
+  baseFee: number;
+  pricePerHealth: number;
+}
+
 export interface CopConfig {
   id: string;
   name: string;
@@ -176,6 +185,7 @@ export interface GameConfig {
   drugs: DrugConfig[];
   guns: GunConfig[];
   merchants: MerchantConfig[];
+  doctors: DoctorConfig[];
   cops: CopConfig[];
   dealers: DealerConfig[];
   hobos: HoboConfig[];
@@ -346,5 +356,6 @@ export type GameCommand =
   | { type: "buyGun"; gunId: string; amount: number; merchantId?: string }
   | { type: "sellGun"; gunId: string; amount: number; merchantId?: string }
   | { type: "hireHelper"; amount: number }
+  | { type: "visitDoctor"; doctorId: string }
   | { type: "rememberNpc"; npcId: string; kind: NpcMemoryKind; text: string }
   | { type: "answerPrompt"; answer: "yes" | "no" | "run" | "fight" };

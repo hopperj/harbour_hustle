@@ -4,6 +4,7 @@ import type {
   CopConfig,
   DealerConfig,
   DealerStock,
+  DoctorConfig,
   DrugConfig,
   GameCommand,
   GameConfig,
@@ -101,6 +102,14 @@ function getMerchant(config: GameConfig, id: string): MerchantConfig {
   return merchant;
 }
 
+function getDoctor(config: GameConfig, id: string): DoctorConfig {
+  const doctor = config.doctors.find((item) => item.id === id);
+  if (!doctor) {
+    throw new Error(`Unknown doctor: ${id}`);
+  }
+  return doctor;
+}
+
 function getCop(config: GameConfig, id: string): CopConfig {
   return config.cops.find((item) => item.id === id) ?? config.cops[0];
 }
@@ -135,6 +144,19 @@ function hobosForLocation(config: GameConfig, locationId: string): HoboConfig[] 
 
 export function merchantsForLocation(config: GameConfig, locationId: string): MerchantConfig[] {
   return config.merchants.filter((merchant) => merchant.locationId === locationId);
+}
+
+export function doctorsForLocation(config: GameConfig, locationId: string): DoctorConfig[] {
+  return config.doctors.filter((doctor) => doctor.locationId === locationId);
+}
+
+export function doctorVisitPrice(state: GameState, doctor: DoctorConfig): number {
+  const missingHealth = clamp(100 - state.player.health, 0, 100);
+  if (missingHealth === 0) {
+    return 0;
+  }
+
+  return Math.max(1, doctor.baseFee + missingHealth * doctor.pricePerHealth);
 }
 
 function marketQuote(state: GameState, drugId: string): MarketQuote {
@@ -1477,26 +1499,6 @@ function damagePlayer(config: GameConfig, state: GameState, damage: number): voi
   finishGame(state, "You're dead! Game over.");
 }
 
-function maybeDoctor(config: GameConfig, state: GameState): void {
-  if (state.gameOver || state.player.health >= 100) {
-    return;
-  }
-
-  let roll = 0;
-  [state.rngState, roll] = randomInt(state.rngState, 0, 100);
-  const location = getLocation(config, state.player.locationId);
-  if (roll > effectivePolicePresence(config, state, location)) {
-    let price = 0;
-    [state.rngState, price] = randomPrice(state.rngState, config.prices.helperMin, config.prices.helperMax);
-    price = Math.max(1, Math.floor((price * state.player.health) / 500));
-    createPrompt(state, {
-      type: "doctor",
-      price,
-      text: withEh(state, withSwearing(state, `Do you pay a doctor ${formatMoney(config, price)} to sew you up?`, 25), 45),
-    });
-  }
-}
-
 function createCopsPrompt(config: GameConfig, state: GameState): void {
   const cop = config.cops[Math.min(state.player.defeatedCopTier, config.cops.length - 1)];
   let deputies = 0;
@@ -1715,6 +1717,10 @@ function serviceLog(config: GameConfig, state: GameState): void {
   if (localMerchants.length > 0) {
     pushLog(state, "info", `${localMerchants.map((merchant) => merchant.name).join(", ")} ${localMerchants.length === 1 ? "is" : "are"} open for trade.`);
   }
+  const localDoctors = doctorsForLocation(config, locationId);
+  if (localDoctors.length > 0) {
+    pushLog(state, "info", `${localDoctors.map((doctor) => doctor.name).join(", ")} ${localDoctors.length === 1 ? "is" : "are"} taking patients.`);
+  }
   if (locationId === config.serviceLocations.roughPub) {
     pushLog(state, "info", `You can hire ${config.names.helperPlural} at ${config.names.roughPub}.`);
   }
@@ -1750,7 +1756,6 @@ function runFromCops(config: GameConfig, state: GameState): void {
   if (roll < 60) {
     state.pendingPrompt = null;
     pushLog(state, "good", withPoliceSorry(state, "You got away!", 55));
-    maybeDoctor(config, state);
     return;
   }
 
@@ -1772,7 +1777,6 @@ function runFromCops(config: GameConfig, state: GameState): void {
   damage = Math.max(1, Math.floor((damage * 100) / config.playerArmor));
   state.pendingPrompt = null;
   damagePlayer(config, state, damage);
-  maybeDoctor(config, state);
 }
 
 function fightCops(config: GameConfig, state: GameState): void {
@@ -1806,7 +1810,6 @@ function fightCops(config: GameConfig, state: GameState): void {
     state.player.defeatedCopTier = Math.min(config.cops.length - 1, state.player.defeatedCopTier + 1);
     state.pendingPrompt = null;
     pushLog(state, "good", withViolentSorry(state, `You fought off ${cop.name} and found ${formatMoney(config, loot)}.`, 82));
-    maybeDoctor(config, state);
     return;
   }
 
@@ -1821,7 +1824,6 @@ function fightCops(config: GameConfig, state: GameState): void {
   state.pendingPrompt = null;
   pushLog(state, "bad", withViolentSorry(state, `${cop.name} fights back.`));
   damagePlayer(config, state, Math.max(1, damage));
-  maybeDoctor(config, state);
 }
 
 function maybeDealerRetaliation(config: GameConfig, state: GameState, dealer: DealerConfig): void {
@@ -2035,7 +2037,6 @@ function resolveDealerRobbery(config: GameConfig, state: GameState, dealer: Deal
   pushLog(state, "bad", `${dealer.name} fought back with a ${dealerGun.name}.`);
   rememberNpc(state, dealer.id, "violence", `Robbery failed: ${dealer.name} fought back with a ${dealerGun.name} and hurt the player.`);
   damagePlayer(config, state, damage);
-  maybeDoctor(config, state);
   maybeDealerRetaliation(config, state, dealer);
 }
 
@@ -2070,7 +2071,6 @@ function resolveHoboThreat(config: GameConfig, state: GameState, hobo: HoboConfi
     pushLog(state, "bad", withEh(state, withViolentSorry(state, `${hobo.name} fights back.`), 65));
     rememberNpc(state, hobo.id, "violence", `${hobo.name} fought back after the player threatened them.`);
     damagePlayer(config, state, damage);
-    maybeDoctor(config, state);
     return;
   }
 
@@ -2128,6 +2128,7 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
     command.type === "buyHoboIntel" ? "INTEL" :
     command.type === "giftHoboDrug" ? "GIFT" :
     command.type === "threatenHobo" ? "THREATEN" :
+    command.type === "visitDoctor" ? "DOCTOR" :
     command.type === "rememberNpc" ? "CHAT" :
     command.type.toUpperCase();
 
@@ -2504,6 +2505,36 @@ export function applyCommand(config: GameConfig, previous: GameState, command: G
       }
       pushLog(state, "good", `Hired ${amount} ${config.names.helperPlural} for ${formatMoney(config, cost)}.`);
       setHelperPrice(config, state);
+      return state;
+    }
+
+    case "visitDoctor": {
+      if (state.pendingPrompt) {
+        pushLog(state, "bad", "Answer the pending question first.");
+        return state;
+      }
+
+      const doctor = getDoctor(config, command.doctorId);
+      if (doctor.locationId !== state.player.locationId) {
+        pushLog(state, "bad", `${doctor.name} is not here.`);
+        return state;
+      }
+
+      const missingHealth = Math.max(0, 100 - state.player.health);
+      if (missingHealth === 0) {
+        pushLog(state, "info", `${doctor.name} says you do not need patching up.`);
+        return state;
+      }
+
+      const price = doctorVisitPrice(state, doctor);
+      if (!spend(state, price)) {
+        pushLog(state, "bad", `${doctor.name} wants ${formatMoney(config, price)} before touching the kit.`);
+        return state;
+      }
+
+      state.player.health = 100;
+      pushLog(state, "good", `${doctor.name} patched ${missingHealth} health for ${formatMoney(config, price)}.`);
+      rememberNpc(state, doctor.id, "interaction", `Player paid ${doctor.name} ${formatMoney(config, price)} to heal ${missingHealth} health.`);
       return state;
     }
 

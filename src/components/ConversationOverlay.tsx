@@ -1,6 +1,5 @@
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { generateNpcDialogue, npcSceneRails, type OllamaAvailability } from "../game/llmDialogue";
-import { npcDocumentForId } from "../game/npcDocs";
 import type { GameConfig, NpcMemoryKind, Tone } from "../game/types";
 import { TerminalButton } from "./TerminalButton";
 
@@ -134,8 +133,7 @@ export function ConversationThread({ config, ollamaStatus, onRemember, target }:
     setDraft("");
 
     const fallback = fallbackConversationReply(target, playerLine);
-    const npcDocument = npcDocumentForId(target.id);
-    if (!llmAvailable || !npcDocument) {
+    if (!llmAvailable) {
       setMessages([...nextMessages, { id: nextIdRef.current++, speaker: "npc", text: fallback }]);
       onRemember(target.id, "chat", `${target.name} said: ${fallback}`);
       return;
@@ -149,7 +147,7 @@ export function ConversationThread({ config, ollamaStatus, onRemember, target }:
     const reply = await generateNpcDialogue({
       config,
       fallback,
-      npcDocument,
+      npcId: target.id,
       npcName: target.name,
       scene: buildConversationScene(target, messages, playerLine),
       signal: controller.signal,

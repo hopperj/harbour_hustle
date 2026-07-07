@@ -3,10 +3,16 @@ import type { GameConfig } from "./types";
 interface GenerateNpcDialogueParams {
   config: GameConfig;
   fallback: string;
-  npcDocument: string;
+  npcId: string;
   npcName: string;
   scene: string;
   signal?: AbortSignal;
+}
+
+export interface LlmPromptParams {
+  npcDocument: string;
+  npcName: string;
+  scene: string;
 }
 
 interface OllamaGenerateResponse {
@@ -14,11 +20,13 @@ interface OllamaGenerateResponse {
   response?: string;
 }
 
-interface OllamaTagsResponse {
-  models?: Array<{
-    model?: string;
-    name?: string;
-  }>;
+interface AppLlmStatusResponse {
+  available?: boolean;
+}
+
+interface AppLlmDialogueResponse {
+  error?: string;
+  text?: string;
 }
 
 export type OllamaAvailability = "checking" | "available" | "unavailable";
@@ -42,7 +50,7 @@ export function npcSceneRails(focus?: string): string[] {
   ];
 }
 
-function buildSystemPrompt({ npcName }: GenerateNpcDialogueParams): string {
+export function buildSystemPrompt({ npcName }: Pick<LlmPromptParams, "npcName">): string {
   return [
     `You are ${npcName}, and only ${npcName}, a non-player character in Harbour Hustle.`,
     "Harbour Hustle is a retro terminal crime-trading game set around Halifax, Nova Scotia.",
@@ -72,7 +80,7 @@ function buildSystemPrompt({ npcName }: GenerateNpcDialogueParams): string {
   ].join("\n");
 }
 
-function trimEndpoint(endpoint: string): string {
+export function trimEndpoint(endpoint: string): string {
   return endpoint.replace(/\/+$/, "");
 }
 
@@ -82,11 +90,11 @@ export async function checkOllamaAvailability(config: GameConfig, signal?: Abort
   }
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), config.llmDialogue.healthCheckTimeoutMs);
+  const timeout = globalThis.setTimeout(() => controller.abort(), config.llmDialogue.healthCheckTimeoutMs);
   signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
   try {
-    const response = await fetch(`${trimEndpoint(config.llmDialogue.endpoint)}/api/tags`, {
+    const response = await fetch(`${trimEndpoint(config.llmDialogue.endpoint)}/status`, {
       method: "GET",
       signal: controller.signal,
     });
@@ -95,13 +103,12 @@ export async function checkOllamaAvailability(config: GameConfig, signal?: Abort
       return false;
     }
 
-    const data = await response.json() as OllamaTagsResponse;
-    const models = data.models ?? [];
-    return models.some((model) => model.name === config.llmDialogue.model || model.model === config.llmDialogue.model);
+    const data = await response.json() as AppLlmStatusResponse;
+    return data.available === true;
   } catch {
     return false;
   } finally {
-    window.clearTimeout(timeout);
+    globalThis.clearTimeout(timeout);
   }
 }
 
@@ -112,7 +119,7 @@ function stripSpeakerPrefix(text: string, npcName: string): string {
     .replace(/^\s*(NPC|Response|Line)\s*[:\-]\s*/i, "");
 }
 
-function sanitizeDialogue(text: string, npcName: string, fallback: string): string {
+export function sanitizeDialogue(text: string, npcName: string, fallback: string): string {
   const compact = stripSpeakerPrefix(text, npcName)
     .replace(/```[\s\S]*?```/g, "")
     .replace(/^["'“”]+|["'“”]+$/g, "")
@@ -126,7 +133,7 @@ function sanitizeDialogue(text: string, npcName: string, fallback: string): stri
   return compact.length > 320 ? `${compact.slice(0, 317).trimEnd()}...` : compact;
 }
 
-function buildPrompt({ npcDocument, npcName, scene }: GenerateNpcDialogueParams): string {
+export function buildPrompt({ npcDocument, npcName, scene }: LlmPromptParams): string {
   return [
     `NPC name: ${npcName}`,
     "",
@@ -150,20 +157,16 @@ export async function generateNpcDialogue(params: GenerateNpcDialogueParams): Pr
   }
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), params.config.llmDialogue.timeoutMs);
+  const timeout = globalThis.setTimeout(() => controller.abort(), params.config.llmDialogue.timeoutMs);
   params.signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
   try {
-    const response = await fetch(`${trimEndpoint(params.config.llmDialogue.endpoint)}/api/generate`, {
+    const response = await fetch(`${trimEndpoint(params.config.llmDialogue.endpoint)}/dialogue`, {
       body: JSON.stringify({
-        model: params.config.llmDialogue.model,
-        options: {
-          num_predict: params.config.llmDialogue.maxTokens,
-          temperature: params.config.llmDialogue.temperature,
-        },
-        prompt: buildPrompt(params),
-        stream: false,
-        system: buildSystemPrompt(params),
+        fallback: params.fallback,
+        npcId: params.npcId,
+        npcName: params.npcName,
+        scene: params.scene,
       }),
       headers: {
         "Content-Type": "application/json",
@@ -176,15 +179,15 @@ export async function generateNpcDialogue(params: GenerateNpcDialogueParams): Pr
       return params.fallback;
     }
 
-    const data = await response.json() as OllamaGenerateResponse;
-    if (data.error || !data.response) {
+    const data = await response.json() as AppLlmDialogueResponse;
+    if (data.error || !data.text) {
       return params.fallback;
     }
 
-    return sanitizeDialogue(data.response, params.npcName, params.fallback);
+    return data.text;
   } catch {
     return params.fallback;
   } finally {
-    window.clearTimeout(timeout);
+    globalThis.clearTimeout(timeout);
   }
 }

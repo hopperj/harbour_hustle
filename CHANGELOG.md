@@ -24,14 +24,21 @@ All notable changes to Harbour Hustle are documented here.
 - Added shared NPC prompt rails for adult Halifax street profanity while blocking invented mechanics, slurs, and out-of-character assistant behavior.
 - Added Westmount as a posh HRM location with Johnathan, a physics-and-biking dealer focused on cocaine and hallucinogens.
 - Added a dealer-name startup prompt with browser-local profile saves so returning with the same name resumes that run.
+- Added same-origin `/api/llm` webapp proxy endpoints so the server, not the browser client, talks to Ollama.
+- Added doctor NPC services in Downtown Halifax, Dartmouth, Spryfield, and Westmount with explicit paid healing visits.
+- Added structured doctor NPC context docs for future LLM-generated doctor dialog.
 
 ### Changed
 
 - Changed deterministic street intel entries to display as mechanical summaries so generated NPC lines carry the spoken dialog.
-- Changed the New Game button to open the dealer-name profile prompt instead of immediately replacing the active run.
+- Changed the New Game button to open a new-run dealer-name prompt that clears and overwrites the chosen profile, even when the same name is entered.
+- Changed LLM dialog generation so NPC markdown context is read server-side before calling Ollama.
 - Changed hobo intel so it avoids UI-visible facts such as exact police risk labels, dealer relationship values, and reputation/turf numbers.
 - Changed robbery summaries to use factual log text while leaving character reactions to generated NPC dialog.
 - Changed prompt encounters so the mechanical text remains stable while generated NPC speech appears separately after the LLM response.
+- Changed dealer robbery flow so retaliation police prompts appear after the robbery report is closed instead of inside the same action overlay.
+- Changed healing so doctors are no longer random post-combat prompts; players must visit a doctor location deliberately.
+- Changed Johnathan's personality context so he is intensely protective of his cat Newton and frequently reports what Newton is thinking.
 - Changed the travel panel so current location and long names are easier to read.
 - Changed the status bar and app columns to improve space allocation and avoid clipped values.
 - Changed dealer selector tabs to label dealers explicitly.
